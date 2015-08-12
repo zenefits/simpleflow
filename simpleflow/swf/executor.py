@@ -127,7 +127,7 @@ class Executor(executor.Executor):
                     logger.info(
                         'Activity type {} in domain {} already exists'.format(
                             activity_type.name,
-                            self.domain.name))
+                           self.domain.name))
                 return None
             logger.info('failed to schedule {}: {}'.format(
                 event['activity_type']['name'],
@@ -166,11 +166,50 @@ class Executor(executor.Executor):
 
         if state == 'start_initiated':
             future._state = futures.PENDING
+        elif state == 'start_failed':
+            if event['cause'] == 'WORKFLOW_TYPE_DOES_NOT_EXIST':
+                workflow_type = swf.models.WorkflowType(
+                    self.domain,
+                    name=event['workflow_type']['name'],
+                    version=event['workflow_type']['version'],
+                )
+                logger.info('Creating workflow type {} in domain {}'.format(
+                    workflow_type.name,
+                    self.domain.name,
+                ))
+                try:
+                    workflow_type.save()
+                except swf.exceptions.AlreadyExistsError:
+                    # Could have be created by a concurrent workflow execution.
+                    pass
+                return None
         elif state == 'started':
             future._state = futures.RUNNING
         elif state == 'completed':
             future._state = futures.FINISHED
             future._result = json.loads(event['result'])
+        elif state == 'failed':
+            future._state = futures.FINISHED
+            future._exception = exceptions.TaskFailed(
+                name=event['id'],
+                reason=event['reason'],
+                details=event.get('details'),
+            )
+        elif state == 'timed_out':
+            future._state = futures.FINISHED
+            print event
+            future._exception = exceptions.TimeoutError(
+                event['timeout_type'],
+                None,
+            )
+        elif state == 'canceled':
+            future._state = futures.FINISHED
+            future._exception = exceptions.TaskCanceled(
+                event.get('details'),
+            )
+        elif state == 'terminated':
+            future._state = futures.FINISHED
+            future._exception = exceptions.TaskTerminated()
 
         return future
 
@@ -212,7 +251,12 @@ class Executor(executor.Executor):
         return None  # means the is not in SWF.
 
     def resume_child_workflow(self, task, event):
-        return self._get_future_from_child_workflow_event(event)
+        future = self._get_future_from_child_workflow_event(event)
+
+        if future.state == "FINISHED" and future.exception:
+            raise future.exception
+
+        return future
 
     def schedule_task(self, task, task_list=None):
         logger.debug('executor is scheduling task {} on task_list {}'.format(
