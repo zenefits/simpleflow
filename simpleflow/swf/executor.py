@@ -227,7 +227,11 @@ class Executor(executor.Executor):
         otherwise schedules it.
 
         """
-        task.id = self._make_task_id(task)
+        # Automatically create a task id if `activity_id` was not sent when
+        # submitting the task
+        if not task.id:
+            task.id = self._make_task_id(task)
+
         event = self.find_event(task, self._history)
 
         future = None

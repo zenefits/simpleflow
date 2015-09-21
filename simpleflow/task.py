@@ -32,8 +32,8 @@ class ActivityTask(Task):
     def __init__(self, activity, *args, **kwargs):
         self.activity = activity
         self.args = args
+        self.id = kwargs.pop('activity_id', None)
         self.kwargs = kwargs
-        self.id = None
 
     @property
     def name(self):

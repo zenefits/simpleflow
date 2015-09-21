@@ -972,6 +972,27 @@ def test_activity_not_found_schedule_failed():
     check_task_scheduled_decision(decisions[0], increment)
 
 
+class TestDefinitionWithActivityId(TestWorkflow):
+    """
+    Execute a single task with an argument passed as the workflow's input.
+
+    """
+    def run(self, a):
+        b = self.submit(increment, a, activity_id="run_x")
+        return b.result
+
+
+def test_activity_with_id():
+    workflow = TestDefinitionWithActivityId
+    executor = Executor(DOMAIN, workflow)
+
+    history = builder.History(workflow,
+                              input={'args': (1,)})
+
+    decisions, _ = executor.replay(history)
+    assert decisions[0]['scheduleActivityTaskDecisionAttributes']['activityId'] == "run_x"
+
+
 def raise_already_exists(activity):
     @functools.wraps(raise_already_exists)
     def wrapped(*args):
