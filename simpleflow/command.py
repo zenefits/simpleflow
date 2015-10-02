@@ -21,9 +21,7 @@ from simpleflow.swf.process import decider
 from simpleflow.swf.process import worker
 from simpleflow import __version__
 
-
 __all__ = ['start', 'info', 'profile', 'status', 'list']
-
 
 logger = logging.getLogger(__name__)
 
@@ -40,7 +38,7 @@ def get_workflow(clspath):
 @click.option('--header/--no-header', default=False)
 @click.version_option(version=__version__)
 @click.pass_context
-def cli(ctx, header,  format):
+def cli(ctx, header, format):
     ctx.params['format'] = format
     ctx.params['header'] = header
 
@@ -75,7 +73,7 @@ def get_input(input=None):
               required=False,
               help='that identifies the workflow execution')
 @click.option('--decision-tasks-timeout',
-              required=False,)
+              required=False, )
 @click.option('--execution-timeout',
               required=False,
               help='for the whole workflow execution')
@@ -91,14 +89,14 @@ def get_input(input=None):
 @click.argument('workflow')
 @cli.command('workflow.start', help='the workflow defined in the WORKFLOW module')
 def start_workflow(workflow,
-          domain,
-          workflow_id,
-          task_list,
-          execution_timeout,
-          tags,
-          decision_tasks_timeout,
-          input,
-          local):
+                   domain,
+                   workflow_id,
+                   task_list,
+                   execution_timeout,
+                   tags,
+                   decision_tasks_timeout,
+                   input,
+                   local):
     workflow_definition = get_workflow(workflow)
 
     input = get_input(input)
@@ -216,10 +214,14 @@ def status(ctx, domain, workflow_id, run_id, nb_tasks):
 
 
 @click.argument('domain')
+@click.option('--status', '-s', default='open', show_default=True, type=click.Choice(['open', 'closed']),
+              help='open/closed')
+@click.option('--started-since', '-d', default=30, show_default=True, help='started since N days')
 @cli.command('workflow.list', help='active workflow executions')
 @click.pass_context
-def list_workflows(ctx, domain):
-    print(with_format(ctx)(helpers.list_workflow_executions)(domain))
+def list_workflows(ctx, domain, status, started_since):
+    print(with_format(ctx)(helpers.list_workflow_executions)(domain, status=status.upper(),
+                                                             start_oldest_date=started_since))
 
 
 @click.argument('task_id')
@@ -245,6 +247,7 @@ def start_decider(workflows, domain, task_list, log_level, nb_processes):
         log_level,
         nb_processes,
     )
+
 
 @click.option('--heartbeat',
               type=int,
@@ -280,39 +283,40 @@ def get_task_list(workflow_id=''):
 @click.option('--heartbeat',
               type=int,
               required=False,
-              help='interval in seconds')
+              help='Heartbeat interval in seconds.')
 @click.option('--nb-workers',
               type=int,
               required=False,
-              help='Set the number of parallel processes handling activity tasks')
+              help='Number of parallel processes handling activity tasks.')
 @click.option('--input', '-i',
               required=False,
-              help='Path to a JSON file that contains the input of the workflow')
+              help='Path to a JSON file that contains the input of the workflow.')
 @click.option('--tags',
               required=False,
-              help='that identifies the workflow execution')
+              help='Tags identifying the workflow execution.')
 @click.option('--decision-tasks-timeout',
-              required=False,)
+              required=False,
+              help='Decision tasks timeout.')
 @click.option('--execution-timeout',
               required=False,
-              help='for the whole workflow execution')
-@click.option('--workflow-id',
+              help='Timeout for the whole workflow execution.')
+@click.option('--workflow-id', '-w',
               required=False,
-              help='of the workflow execution')
-@click.option('--domain', '-d', required=True, help='SWF Domain')
+              help='ID of the workflow execution.')
+@click.option('--domain', '-d', required=True, help='SWF Domain.')
 @click.argument('workflow')
-@cli.command('standalone', help='execute a workflow with a single process')
+@cli.command('standalone', help='Execute a workflow locally.')
 @click.pass_context
 def standalone(context,
-        workflow,
-        domain,
-        workflow_id,
-        execution_timeout,
-        tags,
-        decision_tasks_timeout,
-        input,
-        nb_workers,
-        heartbeat):
+               workflow,
+               domain,
+               workflow_id,
+               execution_timeout,
+               tags,
+               decision_tasks_timeout,
+               input,
+               nb_workers,
+               heartbeat):
     """
     This command spawn a decider and an activity worker to execute a workflow
     with a single main process.

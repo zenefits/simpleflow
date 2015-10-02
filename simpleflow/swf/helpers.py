@@ -67,10 +67,10 @@ def show_workflow_status(domain_name, workflow_id, run_id=None, nb_tasks=None):
     return pretty.status(workflow_execution, nb_tasks)
 
 
-def list_workflow_executions(domain_name):
+def list_workflow_executions(domain_name, *args, **kwargs):
     domain = swf.models.Domain(domain_name)
     query = swf.querysets.WorkflowExecutionQuerySet(domain)
-    executions = query.all()
+    executions = query.all(*args, **kwargs)
 
     return pretty.list(executions)
 
