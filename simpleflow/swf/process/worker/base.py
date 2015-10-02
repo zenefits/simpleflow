@@ -2,11 +2,10 @@ import json
 import logging
 import multiprocessing
 import os
-import psutil
 import signal
-import sys
 import traceback
 
+import psutil
 import swf.actors
 import swf.format
 
@@ -17,7 +16,6 @@ from simpleflow.swf.process.actor import (
     with_state,
 )
 from .dispatch import from_task_registry
-
 
 logger = logging.getLogger(__name__)
 
@@ -161,7 +159,9 @@ def spawn(poller, token, task, heartbeat=60):
     info = {}
     monitor_child(worker.pid, info)
 
-    def worker_alive(): psutil.pid_exists(worker.pid)
+    def worker_alive():
+        psutil.pid_exists(worker.pid)
+
     while worker_alive():
         worker.join(timeout=heartbeat)
         if not worker_alive():

@@ -21,7 +21,8 @@ from simpleflow.swf.process import decider
 from simpleflow.swf.process import worker
 from simpleflow import __version__
 
-__all__ = ['start', 'info', 'profile', 'status', 'list']
+# FIXME: remove or complete
+__all__ = ['start_workflow', 'info', 'profile', 'status', 'list_workflows']
 
 logger = logging.getLogger(__name__)
 

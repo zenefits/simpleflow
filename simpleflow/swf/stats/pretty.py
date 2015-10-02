@@ -9,7 +9,6 @@ from tabulate import tabulate
 from . import WorkflowStats
 from simpleflow.history import History
 
-
 TEMPLATE = '''
 Workflow Execution {workflow_id}
 Domain: {workflow_type.domain.name}
@@ -19,7 +18,6 @@ Workflow Type: {workflow_type.name}
 
 Total time = {total_time} seconds
 '''
-
 
 TIME_FORMAT = '%Y-%m-%d %H:%M'
 
@@ -64,7 +62,7 @@ def _serialize_complex_object(obj):
     if isinstance(obj, types.GeneratorType):
         return [i for i in obj]
     raise TypeError(
-        "Type %s couldn't be serialized. This is a bug in simpleflow," \
+        "Type %s couldn't be serialized. This is a bug in simpleflow,"
         " please file a new issue on GitHub!" % type(obj))
 
 
@@ -191,7 +189,7 @@ def status(workflow_execution, nb_tasks=None):
     rows = [
         (task['name'],) + get_timestamps(task) for task in
         history._tasks[::-1]
-    ]
+        ]
     if nb_tasks:
         rows = rows[:nb_tasks]
 
@@ -207,6 +205,7 @@ def formatted(with_info=False, with_header=False, fmt=DEFAULT_FORMAT):
                 rows,
                 headers=header if (with_header or fmt == human) else [],
             )
+
         wrapped.__wrapped__ = wrapped
         return wrapped
 
@@ -219,10 +218,10 @@ def formatted(with_info=False, with_header=False, fmt=DEFAULT_FORMAT):
 def list(workflow_executions):
     header = 'Workflow ID', 'Workflow Type', 'Status'
     rows = ((
-        execution.workflow_id,
-        execution.workflow_type.name,
-        execution.status,
-    ) for execution in workflow_executions)
+                execution.workflow_id,
+                execution.workflow_type.name,
+                execution.status,
+            ) for execution in workflow_executions)
 
     return header, rows
 
@@ -245,4 +244,4 @@ def get_task(workflow_execution, task_id):
         task['input'],
         task['result'],
     )]
-    return  header, rows
+    return header, rows

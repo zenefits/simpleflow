@@ -1,11 +1,9 @@
 import os
 import time
 import logging
-import signal
 import multiprocessing
 
 import swf.exceptions
-
 from botify.saas.utils import retry
 
 logger = logging.getLogger(__name__)
@@ -29,12 +27,12 @@ class HeartbeatProcess(object):
 
     def run(self, token, task):
         ppid = os.getppid()
-        response = {}
 
         while True:
             time.sleep(self._interval)
 
             if os.getppid() != ppid:
+                # noinspection PyProtectedMember
                 os._exit(1)
 
             try:
