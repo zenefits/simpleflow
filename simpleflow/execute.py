@@ -6,7 +6,7 @@ import json
 import cPickle as pickle
 import base64
 import logging
-
+import traceback
 
 __all__ = ['program', 'python']
 
@@ -23,9 +23,9 @@ def format_arguments(*args, **kwargs):
     Returns a string that contains the values of *args* and *kwargs* as command
     line options.
 
-    :param args: that can be converted to strings.
+    :param args: args that can be converted to strings.
     :type  args: tuple.
-    :param kwargs: whose keys and values can be converted to strings.
+    :param kwargs: kwargs whose keys and values can be converted to strings.
     :type  kwargs: dict.
 
     :returns:
@@ -138,17 +138,19 @@ def python(interpreter='python'):
     such as pypy.
 
     Arguments of the decorated callable must be serializable in JSON.
+    :param interpreter: python interpreter.
+    :type interpreter: str
 
     """
     def wrap_callable(func):
         @functools.wraps(func)
         def execute(*args, **kwargs):
             command = 'simpleflow.execute'  # name of a module.
+            full_command = [
+                interpreter, '-m', command,  # execute module a script.
+                get_name(func), format_arguments_json(*args, **kwargs),
+            ]
             try:
-                full_command = [
-                    interpreter, '-m', command,  # execute module a script.
-                    get_name(func), format_arguments_json(*args, **kwargs),
-                ]
                 output = subprocess.check_output(
                     full_command,
                     # Redirect stderr to stdout to get traceback on error.
@@ -161,6 +163,9 @@ def python(interpreter='python'):
                     )
                 )
                 exclines = err.output.rstrip().rsplit('\n', 2)
+                if not exclines:
+                    raise Exception('Unexpected error')
+
                 excline = exclines[-1]
 
                 try:
@@ -357,6 +362,7 @@ if __name__ == '__main__':
     try:
         result = callable_(*args, **kwargs)
     except Exception as err:
+        traceback.print_exc()
         # Use base64 encoding to avoid carriage returns and special characters.
         print(base64.b64encode(
             pickle.dumps(err)))
