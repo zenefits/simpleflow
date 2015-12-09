@@ -3,6 +3,7 @@ from __future__ import absolute_import
 import json
 import abc
 import collections
+import inspect
 
 from . import futures
 
@@ -61,8 +62,15 @@ class ActivityTask(Task):
     def execute(self):
         method = self.activity._callable
         if hasattr(method, 'execute'):
-            return method(*self.args, **self.kwargs).execute()
+            if inspect.isclass(method):
+                # non instantiated class
+                instance = method(*self.args, **self.kwargs)
+            else:
+                # already instantiated object
+                instance = method
+            return instance.execute()
         else:
+            # raw callable, call it directly
             return method(*self.args, **self.kwargs)
 
 

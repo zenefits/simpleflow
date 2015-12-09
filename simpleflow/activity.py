@@ -77,7 +77,9 @@ class Activity(object):
         callable = self._callable
         prefix = self._callable.__module__
 
-        if hasattr(callable, 'name'):
+        # Here we check if 'callable' is already an Activity, because
+        # in that case we'd loop forever if we entered this conditional
+        if not isinstance(callable, Activity) and hasattr(callable, 'name'):
             name = callable.name
         elif hasattr(callable, '__name__'):
             name = callable.__name__
@@ -93,3 +95,19 @@ class Activity(object):
             self.name,
             self.version,
             self.task_list)
+
+
+class InstanciatedActivity(Activity):
+    def __init__(self, *args, **kwargs):
+        attrs = {}
+        for attr in ('name', 'version', 'task_list', 'retry', 'raises_on_failure',
+                     'start_to_close_timeout', 'schedule_to_close_timeout',
+                     'schedule_to_start_timeout', 'heartbeat_timeout',
+                     'idempotent'):
+            if hasattr(self, attr):
+                attrs[attr] = getattr(self, attr)
+        super(InstanciatedActivity, self).__init__(
+            # we re-pass the instance itself to be the "callable" of this activity
+            self,
+            **attrs
+        )
