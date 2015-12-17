@@ -253,6 +253,9 @@ class Executor(executor.Executor):
     def resume_child_workflow(self, task, event):
         future = self._get_future_from_child_workflow_event(event)
 
+        if not future:  # Happens, not sure what it means ; TODO: clarify that
+            return None
+
         if future.state == "FINISHED" and future.exception:
             raise future.exception
 
@@ -317,7 +320,7 @@ class Executor(executor.Executor):
             if isinstance(func, Activity):
                 task = ActivityTask(func, *args, **kwargs)
             elif issubclass(func, Workflow):
-                task = WorkflowTask(func, *args, **kwargs)
+                task = WorkflowTask(func, *args, __executor=self, **kwargs)
             else:
                 # NB: isinstance() and issubclass() may raise a TypeError too
                 # hence the try/except reraising a TypeError. Found reason in
