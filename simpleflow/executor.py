@@ -95,7 +95,7 @@ class Executor(object):
     def after_run(self):
         pass
 
-    def on_failure(self, reason, details=None):
+    def on_failure(self, args, kwargs, reason, details=None):
         """
         Method called when the workflow fails.
 
@@ -107,7 +107,7 @@ class Executor(object):
         """
         pass
 
-    def fail(self, reason, details=None):
+    def fail(self, args, kwargs, reason, details=None):
         """
         Explicitly fails the workflow.
 
