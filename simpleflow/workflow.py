@@ -78,8 +78,8 @@ class Workflow(object):
         group = canvas.Group(*[task.ActivityTask(activity, *i) for i in iterable])
         return self.submit(group).futures
 
-    def fail(self, reason, details=None):
-        self._executor.fail(reason, details)
+    def fail(self, reason, details=None, wfargs=None, wfkwargs=None):
+        self._executor.fail(reason, details, wfargs, wfkwargs)
 
     def before_run(self, history):
         pass
@@ -90,9 +90,15 @@ class Workflow(object):
     def after_run(self, history):
         pass
 
-    def on_failure(self, history, reason, details=None):
+    def on_failure(self, history, reason, details=None, wfargs=None, wfkwargs=None):
         """
         The executor calls this method when the workflow fails.
 
         """
-        raise NotImplementedError
+        pass
+
+    def on_start(self, wfargs=None, wfkwargs=None):
+        pass
+
+    def on_complete(self, result, history, wfargs=None, wfkwargs=None):
+        pass

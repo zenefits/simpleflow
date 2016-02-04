@@ -37,7 +37,6 @@ class Task(object):
         return {key: get_actual_value(val) for
                 key, val in kwargs.iteritems()}
 
-
 class ActivityTask(Task):
     def __init__(self, activity, *args, **kwargs):
         if not isinstance(activity, Activity):
@@ -67,7 +66,6 @@ class ActivityTask(Task):
         else:
             return method(*self.args, **self.kwargs)
 
-
 class WorkflowTask(Task):
     def __init__(self, workflow, *args, **kwargs):
         self.workflow = workflow
@@ -84,7 +82,8 @@ class WorkflowTask(Task):
     def __repr__(self):
         return '{}(workflow={}, args={}, kwargs={}, id={})'.format(
             self.__class__.__name__,
-            self.activity,
+            self.workflow,
             self.args,
             self.kwargs,
             self.id)
+

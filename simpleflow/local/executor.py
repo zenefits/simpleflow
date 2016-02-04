@@ -17,9 +17,6 @@ class Executor(executor.Executor):
 
     """
     def submit(self, func, *args, **kwargs):
-        logger.info('executing task {}(args={}, kwargs={})'.format(
-            func, args, kwargs))
-
         future = futures.Future()
 
         task = ActivityTask(func, *args, **kwargs)

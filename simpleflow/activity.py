@@ -93,3 +93,4 @@ class Activity(object):
             self.name,
             self.version,
             self.task_list)
+

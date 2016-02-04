@@ -736,7 +736,7 @@ def test_workflow_with_more_than_max_decisions():
 class OnFailureMixin(object):
     failed = False
 
-    def on_failure(self, history, reason, details=None):
+    def on_failure(self, history, reason, details=None, wfargs=None, wfkwargs=None):
         self.failed = True
 
 
@@ -817,6 +817,7 @@ def test_workflow_activity_raises_on_failure():
 
     workflow_failed = swf.models.decision.WorkflowExecutionDecision()
     workflow_failed.fail(
+        details='DETAILS',
         reason='Workflow execution error in task '
                'activity-tests.data.activities.raise_on_failure: '
                '"error"')

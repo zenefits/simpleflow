@@ -39,7 +39,7 @@ class TaskFailed(Exception):
         super(TaskFailed, self).__init__(name, reason, details)
         self.name = name
         self.reason = reason
-        self.details = None
+        self.details = details
 
     def __repr__(self):
         return '{} ({}, "{}")'.format(
@@ -58,3 +58,20 @@ class TimeoutError(Exception):
         return '{}({})'.format(
             self.__class__.__name__,
             self.timeout_type)
+
+# Task cancellation that's NOT catachable by task body
+class TaskCancelled(Exception):
+    def __init__(self, task, details=None):
+        self.task = task
+        self.details = details
+
+    def __repr__(self):
+        return '{}(task={} details={})'.format(
+            self.__class__.__name__,
+            self.task,
+            self.details)
+
+# Soft task cancellation that's catchable by task body
+class SoftTaskCancelled(TaskCancelled):
+    def __init__(self, task, details=None):
+        super(SoftTaskCancelled, self).__init__(task, details)
