@@ -72,6 +72,7 @@ class DeciderPoller(swf.actors.Decider, Poller):
                         task_list))
 
         self.nb_retries = nb_retries
+        self.is_alive = True
 
         Poller.__init__(
             self,
