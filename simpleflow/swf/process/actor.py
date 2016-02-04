@@ -207,6 +207,8 @@ class Poller(NamedMixin, swf.actors.Actor):
     def bind_signal_handlers(self):
         """Binds signals for graceful shutdown.
 
+        - SIGUSR1 leads to a soft cancellation for running task.
+        - SIGUSR2 leads to a hard cancellation for running task.
         - SIGTERM and SIGINT lead to a graceful shutdown.
         - SIGSEGV, SIGFPE, SIGABRT, SIGBUS and SIGILL displays a traceback
           using the faulthandler library if available.
@@ -235,13 +237,14 @@ class Poller(NamedMixin, swf.actors.Actor):
         except ImportError:
             pass
 
-        def NoopSigusr1(signum, frame):
-            # before a task is actually run, SIGUSR1 signal will do nothing
+        def NOOP_SIGUSR(signum, frame):
+            # before a task is actually run, SIGUSR1 and SIGUSR2 signal will do nothing
             pass
 
         signal.signal(signal.SIGTERM, signal_graceful_shutdown)
         signal.signal(signal.SIGINT, signal_graceful_shutdown)
-        signal.signal(signal.SIGUSR1, NoopSigusr1)
+        signal.signal(signal.SIGUSR1, NOOP_SIGUSR)
+        signal.signal(signal.SIGUSR2, NOOP_SIGUSR)
 
     @with_state('running')
     def start(self):

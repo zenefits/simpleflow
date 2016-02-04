@@ -10,10 +10,15 @@ class History(object):
         self._child_workflows = collections.OrderedDict()
         self._tasks = []
         self._isCancelRequested = False
+        self._isWorkflowStarted = False
 
     @property
     def is_cancel_requested(self):
         return self._isCancelRequested
+
+    @property
+    def is_workflow_started(self):
+        return self._isWorkflowStarted and len(self._activities) == 0 and len(self._tasks) == 0 and len(self._child_workflows) == 0
 
     @property
     def events(self):
@@ -190,5 +195,7 @@ class History(object):
                 self.parse_child_workflow_event(events, event)
             elif event.type == 'WorkflowExecution' and event.state == 'cancel_requested':
                 self._isCancelRequested = True
+            elif event.type == 'WorkflowExecution' and event.state == 'started':
+                self._isWorkflowStarted = True
             else:
                 pass

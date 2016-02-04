@@ -66,28 +66,6 @@ class ActivityTask(Task):
         else:
             return method(*self.args, **self.kwargs)
 
-    def before_scheduling(self):
-        self.activity.before_scheduling(*self.args, **self.kwargs)
-
-    def after_scheduling(self):
-        self.activity.after_scheduling(*self.args, **self.kwargs)
-
-    def activity_started(self, event, history):
-        self.activity.activity_started(*self.args, **dict(self.kwargs, event=event, history=history))
-
-    def activity_completed(self, event, history):
-        self.activity.activity_completed(*self.args, **dict(self.kwargs, event=event, history=history))
-
-    def activity_canceled(self, event, history):
-        self.activity.activity_canceled(*self.args, **dict(self.kwargs, event=event, history=history))
-
-    def activity_failed(self, event, history):
-        self.activity.activity_failed(*self.args, **dict(self.kwargs, event=event, history=history))
-
-    def activity_timedout(self, event, history):
-        self.activity.activity_timedout(*self.args, **dict(self.kwargs, event=event, history=history))
-
-
 class WorkflowTask(Task):
     def __init__(self, workflow, *args, **kwargs):
         self.workflow = workflow
@@ -109,8 +87,3 @@ class WorkflowTask(Task):
             self.kwargs,
             self.id)
 
-    def before_scheduling(self):
-        self.workflow.before_scheduling(*self.args, **self.kwargs)
-
-    def after_scheduling(self):
-        self.workflow.after_scheduling(*self.args, **self.kwargs)

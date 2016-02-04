@@ -135,25 +135,20 @@ class Executor(executor.Executor):
             ))
             return None
         elif state == 'started':
-            task.activity_started(event, self._history)
             future._state = futures.RUNNING
         elif state == 'completed':
-            task.activity_completed(event, self._history)
             future._state = futures.FINISHED
             result = event['result']
             future._result = json.loads(result) if result else None
         elif state == 'canceled':
-            task.activity_canceled(event, self._history)
             future._state = futures.CANCELLED
         elif state == 'failed':
-            task.activity_failed(event, self._history)
             future._state = futures.FINISHED
             future._exception = exceptions.TaskFailed(
                 name=event['id'],
                 reason=event['reason'],
                 details=event.get('details'))
         elif state == 'timed_out':
-            task.activity_timedout(event, self._history)
             future._state = futures.FINISHED
             future._exception = exceptions.TimeoutError(
                 event['timeout_type'],
@@ -225,9 +220,7 @@ class Executor(executor.Executor):
             task_list,
         ))
 
-        task.before_scheduling()
         decisions = task.schedule(self.domain, task_list)
-        task.after_scheduling()
 
         # ``decisions`` contains a single decision.
         self._decisions.extend(decisions)
@@ -332,6 +325,10 @@ class Executor(executor.Executor):
         args = input.get('args', ())
         kwargs = input.get('kwargs', {})
 
+        if self._history.is_workflow_started:
+            # the workflow has just started
+            self.on_start(args, kwargs)
+
         # check if there is a workflow cancellation request
         if self._history.is_cancel_requested:
             # list all the running activities
@@ -371,7 +368,8 @@ class Executor(executor.Executor):
             logger.exception(reason)
 
             details = getattr(err.exception, 'details', None)
-            self.on_failure(reason, details)
+
+            self.on_failure(reason, details, args, kwargs)
 
             decision = swf.models.decision.WorkflowExecutionDecision()
             decision.fail(
@@ -390,7 +388,7 @@ class Executor(executor.Executor):
             details = 'Traceback:\n{}'.format(tb)
             logger.exception(reason + '\n' + details)
 
-            self.on_failure(reason)
+            self.on_failure(reason, details, args, kwargs)
 
             decision = swf.models.decision.WorkflowExecutionDecision()
             decision.fail(
@@ -403,16 +401,31 @@ class Executor(executor.Executor):
         decision = swf.models.decision.WorkflowExecutionDecision()
         decision.complete(result=swf.format.result(json.dumps(result)))
 
+        self.on_complete(result, args, kwargs)
+
         return [decision], {}
 
-    def on_failure(self, reason, details=None):
+    def on_start(self, wfargs=None, wfkwargs=None):
         try:
-            self._workflow.on_failure(self._history, reason, details)
-        except NotImplementedError:
-            pass
+            self._workflow.on_start(wfargs, wfkwargs)
+        except:
+            logger.exception('Error executing on_start for workflow.', extra = { 'args': json.dumps(wfargs), 'kwargs': json.dumps(wfkwargs) })
 
-    def fail(self, reason, details=None):
-        self.on_failure(reason, details)
+    def on_complete(self, result, wfargs=None, wfkwargs=None):
+        try:
+            self._workflow.on_complete(result, self._history, wfargs, wfkwargs)
+        except:
+            logger.exception('Error executing on_complete for workflow.', extra = { 'args': json.dumps(wfargs), 'kwargs': json.dumps(wfkwargs), 'result': json.dumps(result) })
+
+    def on_failure(self, reason, details=None, wfargs=None, wfkwargs=None):
+        try:
+            self._workflow.on_failure(self._history, reason, details, wfargs, wfkwargs)
+        except:
+            logger.exception('Error executing on_failure for workflow.', extra = { 'args': json.dumps(wfargs), 'kwargs': json.dumps(wfkwargs), 'reason': reason, 'details': details})
+
+    def fail(self, reason, details=None, wfargs=None, wfkwargs=None):
+
+        self.on_failure(reason, details, wfargs, wfkwargs)
 
         decision = swf.models.decision.WorkflowExecutionDecision()
         decision.fail(

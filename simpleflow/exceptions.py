@@ -59,6 +59,7 @@ class TimeoutError(Exception):
             self.__class__.__name__,
             self.timeout_type)
 
+# Task cancellation that's NOT catachable by task body
 class TaskCancelled(Exception):
     def __init__(self, task, details=None):
         self.task = task
@@ -69,3 +70,8 @@ class TaskCancelled(Exception):
             self.__class__.__name__,
             self.task,
             self.details)
+
+# Soft task cancellation that's catchable by task body
+class SoftTaskCancelled(TaskCancelled):
+    def __init__(self, task, details=None):
+        super(SoftTaskCancelled, self).__init__(task, details)
