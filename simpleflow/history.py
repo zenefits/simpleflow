@@ -8,6 +8,7 @@ class History(object):
         self._history = history
         self._activities = collections.OrderedDict()
         self._child_workflows = collections.OrderedDict()
+        self._timers = collections.OrderedDict()
         self._tasks = []
         self._isCancelRequested = False
         self._isWorkflowStarted = False
@@ -30,6 +31,36 @@ class History(object):
         """
         return [k for k,v in self._activities.iteritems() if v['state'] in ['scheduled', 'started']]
 
+    def parse_timer_event(self, events, event):
+        """Aggregate all the attributes of an timer in a single entry.
+
+        """
+
+        if event.state == 'started':
+            timer = {
+                'type': 'timer',
+                'id': event.timer_id,
+                'scheduled_id': event.id,
+                'state': event.state,
+                'scheduled_timestamp': event.timestamp,
+                'input': event.input
+            }
+
+            if event.timer_id not in self._timers:
+                self._timers[event.timer_id] = timer
+            else:
+                # When the executor retries a task, it schedules it again.
+                self._timers[event.timer_id].update(timer)
+
+        elif event.state == 'fired':
+            timer = self._timers[event.timer_id]
+            timer['state'] = event.state
+            timer['completed_id'] = event.id
+            timer['completed_timestamp'] = event.timestamp
+        else:
+            logger.error('Cannot parse timer event state in history. TimerId: %s. State: %s. ',
+                getattr(event, 'timer_id', None),
+                getattr(event, 'state', None))
 
     def parse_activity_event(self, events, event):
         """Aggregate all the attributes of an activity in a single entry.
@@ -197,5 +228,7 @@ class History(object):
                 self._isCancelRequested = True
             elif event.type == 'WorkflowExecution' and event.state == 'started':
                 self._isWorkflowStarted = True
+            elif event.type == 'Timer':
+                self.parse_timer_event(events, event)
             else:
                 pass

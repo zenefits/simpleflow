@@ -325,10 +325,6 @@ class Executor(executor.Executor):
         args = input.get('args', ())
         kwargs = input.get('kwargs', {})
 
-        if self._history.is_workflow_started:
-            # the workflow has just started
-            self.on_start(args, kwargs)
-
         # check if there is a workflow cancellation request
         if self._history.is_cancel_requested:
             # list all the running activities
@@ -338,6 +334,8 @@ class Executor(executor.Executor):
                 # nothing to cancel, completing the workflow as cancelled
                 cancel_decision = swf.models.decision.WorkflowExecutionDecision()
                 cancel_decision.cancel()
+
+                logger.info('Sucessfully canceled the workflow.')
                 return [cancel_decision], {}
 
             cancel_activities_decisions = []
@@ -351,6 +349,25 @@ class Executor(executor.Executor):
                 cancel_activities_decisions.append(decision)
 
             return cancel_activities_decisions, {}
+
+        # handle workflow on start delay
+        if self._workflow.delayed_start_timer > 0:
+            if 'delayed_start_timer' not in self._history._timers:
+                logger.info('Scheduling delayed start decision.')
+                timer = swf.models.decision.TimerDecision(
+                        'start',
+                        id='delayed_start_timer',
+                        start_to_fire_timeout=str(self._workflow.delayed_start_timer))
+                self._decisions.append(timer)
+                return self._decisions, {}
+            elif self._history._timers['delayed_start_timer']['state'] != 'fired':
+                # wait for the timer event, no-op
+                logger.info('Timer has not fired yet.')
+                return [], {}
+
+        if self._history.is_workflow_started:
+            # the workflow has just started
+            self.on_start(args, kwargs)
 
         # workflow not cancelled
         try:
@@ -372,10 +389,15 @@ class Executor(executor.Executor):
             self.on_failure(reason, details, args, kwargs)
 
             decision = swf.models.decision.WorkflowExecutionDecision()
-            decision.fail(
-                reason=swf.format.reason(reason),
-                details=swf.format.details(details),
-            )
+            if self._workflow.is_daemon:
+                # do not fail daemon workflow
+                logger.info('Task failed. Re-running continue_as_new for the daemon workflow.')
+                decision.continue_as_new(input=input, task_list={ 'name': self._workflow.task_list }, task_timeout=str(self._workflow.decision_tasks_timeout))
+            else:
+                decision.fail(
+                    reason=swf.format.reason(reason),
+                    details=swf.format.details(details),
+                )
             return [decision], {}
 
         except Exception, err:
@@ -391,15 +413,25 @@ class Executor(executor.Executor):
             self.on_failure(reason, details, args, kwargs)
 
             decision = swf.models.decision.WorkflowExecutionDecision()
-            decision.fail(
-                reason=swf.format.reason(reason),
-                details=swf.format.details(details),
-            )
+            if self._workflow.is_daemon:
+                # do not fail daemon workflow
+                logger.info('Unexpected workflow error. Re-running continue_as_new for the daemon workflow.')
+                decision.continue_as_new(input=input, task_list={ 'name': self._workflow.task_list }, task_timeout=str(self._workflow.decision_tasks_timeout))
+            else:
+                decision.fail(
+                    reason=swf.format.reason(reason),
+                    details=swf.format.details(details),
+                )
 
             return [decision], {}
 
         decision = swf.models.decision.WorkflowExecutionDecision()
-        decision.complete(result=swf.format.result(json.dumps(result)))
+        if self._workflow.is_daemon:
+            # do not complete daemon workflow
+            logger.info('Running continue_as_new for the daemon workflow.')
+            decision.continue_as_new(input=input, task_list={ 'name': self._workflow.task_list }, task_timeout=str(self._workflow.decision_tasks_timeout))
+        else:
+            decision.complete(result=swf.format.result(json.dumps(result)))
 
         self.on_complete(result, args, kwargs)
 
@@ -409,19 +441,19 @@ class Executor(executor.Executor):
         try:
             self._workflow.on_start(wfargs, wfkwargs)
         except:
-            logger.exception('Error executing on_start for workflow.', extra = { 'args': json.dumps(wfargs), 'kwargs': json.dumps(wfkwargs) })
+            logger.exception('Error executing on_start for workflow.', extra = { 'input_args': json.dumps(wfargs), 'input_kwargs': json.dumps(wfkwargs) })
 
     def on_complete(self, result, wfargs=None, wfkwargs=None):
         try:
             self._workflow.on_complete(result, self._history, wfargs, wfkwargs)
         except:
-            logger.exception('Error executing on_complete for workflow.', extra = { 'args': json.dumps(wfargs), 'kwargs': json.dumps(wfkwargs), 'result': json.dumps(result) })
+            logger.exception('Error executing on_complete for workflow.', extra = { 'input_args': json.dumps(wfargs), 'input_kwargs': json.dumps(wfkwargs), 'result': json.dumps(result) })
 
     def on_failure(self, reason, details=None, wfargs=None, wfkwargs=None):
         try:
             self._workflow.on_failure(self._history, reason, details, wfargs, wfkwargs)
         except:
-            logger.exception('Error executing on_failure for workflow.', extra = { 'args': json.dumps(wfargs), 'kwargs': json.dumps(wfkwargs), 'reason': reason, 'details': details})
+            logger.exception('Error executing on_failure for workflow.', extra = { 'input_args': json.dumps(wfargs), 'input_kwargs': json.dumps(wfkwargs), 'reason': reason, 'details': details})
 
     def fail(self, reason, details=None, wfargs=None, wfkwargs=None):
 
