@@ -72,6 +72,27 @@ class TestDefinitionWithInput(TestWorkflow):
         b = self.submit(increment, a)
         return b.result
 
+class TestDefinitionWithInputWithTaskTimeoutOverride(TestWorkflow):
+    """
+    Execute a single task with an argument passed as the workflow's input.
+    """
+    def run(self, a, task_start_to_close_timeout=None):
+        b = self.submit(increment, a, task_start_to_close_timeout=task_start_to_close_timeout)
+        return b.result
+
+def test_workflow_with_timeout_override():
+    workflow = TestDefinitionWithInputWithTaskTimeoutOverride
+    executor = Executor(DOMAIN, workflow)
+
+    result = 5
+    history = builder.History(workflow,
+                              input={'args': (4,), 'kwargs': { 'task_start_to_close_timeout': '100' }})
+
+    # The executor should only schedule the *increment* task.
+    decisions, _ = executor.replay(history)
+
+    assert decisions[0]['scheduleActivityTaskDecisionAttributes']['startToCloseTimeout'] == '100'
+
 
 def test_workflow_with_input():
     workflow = TestDefinitionWithInput
