@@ -392,7 +392,7 @@ class Executor(executor.Executor):
             if self._workflow.is_daemon:
                 # do not fail daemon workflow
                 logger.info('Task failed. Re-running continue_as_new for the daemon workflow.')
-                decision.continue_as_new(input=input, task_list={ 'name': self._workflow.task_list }, task_timeout=str(self._workflow.decision_tasks_timeout))
+                decision.continue_as_new(input=input, task_list={ 'name': self.task_list }, task_timeout=str(self._workflow.decision_tasks_timeout))
             else:
                 decision.fail(
                     reason=swf.format.reason(reason),
@@ -416,7 +416,7 @@ class Executor(executor.Executor):
             if self._workflow.is_daemon:
                 # do not fail daemon workflow
                 logger.info('Unexpected workflow error. Re-running continue_as_new for the daemon workflow.')
-                decision.continue_as_new(input=input, task_list={ 'name': self._workflow.task_list }, task_timeout=str(self._workflow.decision_tasks_timeout))
+                decision.continue_as_new(input=input, task_list={ 'name': self.task_list }, task_timeout=str(self._workflow.decision_tasks_timeout))
             else:
                 decision.fail(
                     reason=swf.format.reason(reason),
@@ -429,7 +429,7 @@ class Executor(executor.Executor):
         if self._workflow.is_daemon:
             # do not complete daemon workflow
             logger.info('Running continue_as_new for the daemon workflow.')
-            decision.continue_as_new(input=input, task_list={ 'name': self._workflow.task_list }, task_timeout=str(self._workflow.decision_tasks_timeout))
+            decision.continue_as_new(input=input, task_list={ 'name': self.task_list }, task_timeout=str(self._workflow.decision_tasks_timeout))
         else:
             decision.complete(result=swf.format.result(json.dumps(result)))
 

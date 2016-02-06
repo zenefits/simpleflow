@@ -21,8 +21,9 @@ class Workflow(object):
     # default workflow version
     version = '1.0'
 
-    # default task list name
-    task_list = 'default'
+    # None means the workflow can run on any given task list
+    # if set, the workflow can only be process from the given task list
+    task_list = None
 
     # how long should the workflow delay starting (in seconds)
     delayed_start_timer = 0
