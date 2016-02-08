@@ -70,7 +70,7 @@ def read(fname):
     return content
 
 DEPS = [
-    'simple-workflow>=0.1.52',
+    'simple-workflow==0.1.56.1',
     'tabulate==0.7.3',
     'setproctitle',
     'subprocess32',
@@ -78,39 +78,50 @@ DEPS = [
     'psutil',
 ]
 
-setup(
-    name='simpleflow',
-    version=__version__,
-    description='Python library for dataflow programming with Amazon SWF',
-    long_description=(read("README.rst") + '\n\n' +
-                      read("HISTORY.rst")),
-    author='Greg Leclercq',
-    author_email='greg@botify.com',
-    url='https://github.com/botify-labs/simpleflow',
-    packages=find_packages(exclude=("test*", )),
-    package_dir={'simpleflow': 'simpleflow'},
-    include_package_data=True,
-    install_requires=DEPS,
-    license=read("LICENSE"),
-    zip_safe=False,
-    keywords='simpleflow',
-    classifiers=[
-        'Development Status :: 2 - Pre-Alpha',
-        'Intended Audience :: Developers',
-        'License :: OSI Approved :: MIT License',
-        'Natural Language :: English',
-        "Programming Language :: Python :: 2",
-        'Programming Language :: Python :: 2.6',
-        'Programming Language :: Python :: 2.7',
-        'Programming Language :: Python :: 3',
-        'Programming Language :: Python :: 3.3',
-    ],
-    test_suite='tests',
-    tests_require=['pytest'],
-    cmdclass={'test': PyTest},
-    entry_points={
-        'console_scripts': [
-            'simpleflow = simpleflow.command:cli',
-        ]
-    }
-)
+
+def install_simple_workflow():
+    import pip
+    pip.main(['install', 'https://s3-us-west-2.amazonaws.com/zenefits-packages/python-simple-workflow-0.1.56.1.tar.gz'])
+
+
+def main():
+    setup(
+        name='simpleflow',
+        version=__version__,
+        description='Python library for dataflow programming with Amazon SWF',
+        long_description=(read("README.rst") + '\n\n' +
+                          read("HISTORY.rst")),
+        author='Greg Leclercq',
+        author_email='greg@botify.com',
+        url='https://github.com/botify-labs/simpleflow',
+        packages=find_packages(exclude=("test*", )),
+        package_dir={'simpleflow': 'simpleflow'},
+        include_package_data=True,
+        install_requires=DEPS,
+        license=read("LICENSE"),
+        zip_safe=False,
+        keywords='simpleflow',
+        classifiers=[
+            'Development Status :: 2 - Pre-Alpha',
+            'Intended Audience :: Developers',
+            'License :: OSI Approved :: MIT License',
+            'Natural Language :: English',
+            "Programming Language :: Python :: 2",
+            'Programming Language :: Python :: 2.6',
+            'Programming Language :: Python :: 2.7',
+            'Programming Language :: Python :: 3',
+            'Programming Language :: Python :: 3.3',
+        ],
+        test_suite='tests',
+        tests_require=['pytest'],
+        cmdclass={'test': PyTest},
+        entry_points={
+            'console_scripts': [
+                'simpleflow = simpleflow.command:cli',
+            ]
+        }
+    )
+
+if __name__ == '__main__':
+    install_simple_workflow()
+    main()
