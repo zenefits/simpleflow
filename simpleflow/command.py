@@ -45,7 +45,10 @@ def cli(ctx, header, format):
 def get_workflow_type(domain_name, workflow):
     domain = swf.models.Domain(domain_name)
     query = swf.querysets.WorkflowTypeQuerySet(domain)
-    return query.get_or_create(workflow.name, workflow.version)
+    return query.get_or_create(
+      workflow.name, workflow.version,
+      decision_tasks_timeout=workflow.decision_tasks_timeout,
+      execution_timeout=workflow.execution_timeout)
 
 
 def load_input(input_fp):

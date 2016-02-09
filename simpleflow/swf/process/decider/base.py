@@ -66,7 +66,7 @@ class DeciderPoller(swf.actors.Decider, Poller):
                 raise ValueError(
                     'all workflows must be in the same domain "{}"'.format(
                         domain.name))
-            elif ex._workflow.task_list != task_list:
+            elif ex._workflow.task_list != None and ex._workflow.task_list != task_list:
                 raise ValueError(
                     'all workflows must have the same task list "{}"'.format(
                         task_list))

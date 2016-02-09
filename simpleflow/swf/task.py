@@ -38,6 +38,12 @@ class ActivityTask(task.ActivityTask):
             str(activity.task_heartbeat_timeout),
         )
 
+        # check if task_start_to_close_timeout is specified in the task message (task input)
+        task_timeout_override = self.kwargs.get('task_start_to_close_timeout', None)
+
+        if task_timeout_override != None:
+            task_timeout = str(task_timeout_override)
+
         decision = swf.models.decision.ActivityTaskDecision(
             'schedule',
             activity_id=self.id,

@@ -14,6 +14,29 @@ class Workflow(object):
     The actual behavior depends on the executor backend.
 
     """
+
+    # default workflow name
+    name = 'workflow'
+
+    # default workflow version
+    version = '1.0'
+
+    # None means the workflow can run on any given task list
+    # if set, the workflow can only be process from the given task list
+    task_list = None
+
+    # how long should the workflow delay starting (in seconds)
+    delayed_start_timer = 0
+
+    # if this is a daemon workflow - that is, is the workflow going to re-schedule itself at the end of execution
+    is_daemon = False
+
+    # default decision timeout
+    decision_tasks_timeout = 300
+
+    # default execution timeout
+    execution_timeout = 300
+
     def __init__(self, executor):
         self._executor = executor
 

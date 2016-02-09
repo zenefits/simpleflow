@@ -8,6 +8,7 @@ import os
 import platform
 import signal
 import sys
+import time
 
 from setproctitle import setproctitle
 
@@ -262,6 +263,10 @@ class Poller(NamedMixin, swf.actors.Actor):
                 task = self._poll(self.task_list, self.identity)
             except swf.exceptions.PollTimeout:
                 continue
+            except:
+                logger.exception("[%s] Unknow exception when polling on domain %s. Sleep for 1s.", self.name, self.domain.name)
+                time.sleep(1)
+
             self.process(task)
 
     @with_state('stopping')
