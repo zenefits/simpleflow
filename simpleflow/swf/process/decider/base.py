@@ -147,8 +147,8 @@ class DeciderWorker(object):
 
         """
         self._workflow_name = history[0].workflow_type['name']
-        workflow_executor = self._workflows[self._workflow_name]
         try:
+            workflow_executor = self._workflows[self._workflow_name]
             decisions = workflow_executor.replay(history)
             if isinstance(decisions, tuple) and len(decisions) == 2:  # (decisions, context)
                 decisions = decisions[0]

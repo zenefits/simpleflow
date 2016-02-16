@@ -113,12 +113,12 @@ class ActivityWorker(object):
         return self._dispatcher.dispatch_activity(name)
 
     def process(self, poller, token, task):
-        logger.debug('ActivityWorker.porcess() pid={}'.format(os.getpid()))
-        activity = self.dispatch(task)
-        input = json.loads(task.input)
-        args = input.get('args', ())
-        kwargs = input.get('kwargs', {})
         try:
+            logger.debug('ActivityWorker.porcess() pid={}'.format(os.getpid()))
+            activity = self.dispatch(task)
+            input = json.loads(task.input)
+            args = input.get('args', ())
+            kwargs = input.get('kwargs', {})
             result = ActivityTask(activity, self.is_shutdown, *args, **kwargs).execute()
         except TaskCancelled:
             raise
