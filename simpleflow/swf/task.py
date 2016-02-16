@@ -43,6 +43,7 @@ class ActivityTask(task.ActivityTask):
 
         if task_timeout_override != None:
             task_timeout = str(task_timeout_override)
+            duration_timeout = str(task_timeout_override)
 
         decision = swf.models.decision.ActivityTaskDecision(
             'schedule',

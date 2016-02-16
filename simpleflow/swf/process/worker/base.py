@@ -21,6 +21,7 @@ import threading
 from simpleflow.exceptions import SoftTaskCancelled
 from simpleflow.exceptions import TaskCancelled
 from datetime import datetime
+from threading import Event
 
 logger = logging.getLogger(__name__)
 
@@ -48,6 +49,7 @@ class ActivityPoller(Poller, swf.actors.ActivityWorker):
         self._heartbeat = heartbeat
         self._soft_cancel_wait_period = soft_cancel_wait_period
         self.is_alive = True
+        self.is_shutdown = Event()
 
         swf.actors.ActivityWorker.__init__(
             self,
@@ -59,9 +61,8 @@ class ActivityPoller(Poller, swf.actors.ActivityWorker):
 
     @property
     def name(self):
-        return '{}({})'.format(
-            self.__class__.__name__,
-            self._workflow._workflow.name,
+        return '{}'.format(
+            self.__class__.__name__
         )
 
     @with_state('polling')
@@ -71,7 +72,7 @@ class ActivityPoller(Poller, swf.actors.ActivityWorker):
     @with_state('processing task')
     def process(self, request):
         token, task = request
-        run_in_proc(self, token, task, self._heartbeat, self._soft_cancel_wait_period)
+        run_in_proc(self, token, task, self._heartbeat, self._soft_cancel_wait_period, self.is_shutdown)
 
     @with_state('completing')
     def complete(self, token, result):
@@ -98,12 +99,14 @@ class ActivityPoller(Poller, swf.actors.ActivityWorker):
 
 
 class ActivityWorker(object):
-    def __init__(self, workflow):
+    def __init__(self, workflow, is_shutdown=None):
         self._dispatcher = from_task_registry.RegistryDispatcher(
             simpleflow.registry.registry,
             None,
             workflow,
         )
+
+        self.is_shutdown = is_shutdown
 
     def dispatch(self, task):
         name = task.activity_type.name
@@ -116,7 +119,7 @@ class ActivityWorker(object):
         args = input.get('args', ())
         kwargs = input.get('kwargs', {})
         try:
-            result = ActivityTask(activity, *args, **kwargs).execute()
+            result = ActivityTask(activity, self.is_shutdown, *args, **kwargs).execute()
         except TaskCancelled:
             raise
         except Exception as err:
@@ -135,9 +138,9 @@ class ActivityWorker(object):
             poller.fail(token, task, reason)
 
 
-def process_task(poller, token, task):
+def process_task(poller, token, task, is_shutdown):
     logger.debug('process_task() pid={}'.format(os.getpid()))
-    worker = ActivityWorker(poller._workflow)
+    worker = ActivityWorker(poller._workflow, is_shutdown)
     worker.process(poller, token, task)
 
 
@@ -178,7 +181,7 @@ def registerTaskCancelHandler(isTaskFinished, poller, task):
     signal.signal(signal.SIGUSR1, signal_task_cancellation)
     signal.signal(signal.SIGUSR2, signal_task_cancellation)
 
-def run_in_proc(poller, token, task, heartbeat=60, soft_cancel_wait_period=180):
+def run_in_proc(poller, token, task, heartbeat=60, soft_cancel_wait_period=180, is_shutdown=None):
     pid = os.getpid()
     isTaskFinished = threading.Event()
 
@@ -194,7 +197,7 @@ def run_in_proc(poller, token, task, heartbeat=60, soft_cancel_wait_period=180):
     try:
         try:
             logger.info('[SWF][Worker] Start processing task. Task: [%s].', task.activity_type.name)
-            process_task(poller, token, task)
+            process_task(poller, token, task, is_shutdown)
             logger.info('[SWF][Worker] Finished processing task. Task: [%s].', task.activity_type.name)
         except TaskCancelled:
             # task is cancelled by the heartbeat thread from swf
@@ -228,30 +231,33 @@ def run_in_proc(poller, token, task, heartbeat=60, soft_cancel_wait_period=180):
 
 def start_heartbeat(poller, token, task, isTaskFinished, heartbeat, pid, soft_cancel_wait_period):
 
-    cancel_requested_at = None
+    cancel_requested_at = [None]
 
     def try_cancel_task():
-        if cancel_requested_at == None:
+
+        if cancel_requested_at[0] == None:
             # first time. Send a soft cancel
             logger.info('[SWF][Worker][Heartbeat] Sending signal SIGUSR1 for soft cancellation. Task: [%s].', task.activity_type.name)
             os.kill(int(pid), signal.SIGUSR1)
-            cancel_requested_at = datetime.utcnow()
+            cancel_requested_at[0] = datetime.utcnow()
         else:
             # we had sent a cancellation before.
             now = datetime.utcnow()
 
-            if (now - cancel_requested_at).total_seconds() >= soft_cancel_wait_period:
+            if (now - cancel_requested_at[0]).total_seconds() >= soft_cancel_wait_period:
                 # time's up. Send a hard cancellation
                 logger.info('[SWF][Worker][Heartbeat] Sending signal SIGUSR2 for hard cancellation. Task: [%s].', task.activity_type.name)
                 os.kill(int(pid), signal.SIGUSR2)
             else:
-                logger.info('[SWF][Worker][Heartbeat] Soft cancellation sent at [%s]. Waiting the task to be cancelled. Task: [%s].', cancel_requested_at.isoformat(), task.activity_type.name)
+                logger.info('[SWF][Worker][Heartbeat] Soft cancellation sent at [%s]. Waiting the task to be cancelled. Task: [%s].', cancel_requested_at[0].isoformat(), task.activity_type.name)
 
     while (not isTaskFinished.is_set()):
         isTaskFinished.wait(heartbeat)
         if (not isTaskFinished.is_set()):
             # task is still running
             logger.info('[SWF][Worker][Heartbeat] Sending heartbeat. Task: [%s].', task.activity_type.name)
+
+            response = None
 
             try:
                 response = poller.heartbeat(token)

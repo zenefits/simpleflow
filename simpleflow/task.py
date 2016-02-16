@@ -38,7 +38,7 @@ class Task(object):
                 key, val in kwargs.iteritems()}
 
 class ActivityTask(Task):
-    def __init__(self, activity, *args, **kwargs):
+    def __init__(self, activity, is_shutdown=None, *args, **kwargs):
         if not isinstance(activity, Activity):
             raise TypeError('Wrong value for `activity`, got {} instead'.format(type(activity)))
         self.activity = activity
@@ -46,6 +46,7 @@ class ActivityTask(Task):
         self.args = self.resolve_args(*args)
         self.kwargs = self.resolve_kwargs(**kwargs)
         self.id = None
+        self.is_shutdown = is_shutdown
 
     @property
     def name(self):
@@ -61,10 +62,16 @@ class ActivityTask(Task):
 
     def execute(self):
         method = self.activity._callable
+        kwargs = self.kwargs
+
+        # add parameter is_shutdown to allow activity callable to gracefully shutdown
+        if self.is_shutdown:
+            kwargs = dict(self.kwargs, is_shutdown=self.is_shutdown)
+
         if hasattr(method, 'execute'):
-            return method(*self.args, **self.kwargs).execute()
+            return method(*self.args, **kwargs).execute()
         else:
-            return method(*self.args, **self.kwargs)
+            return method(*self.args, **kwargs)
 
 class WorkflowTask(Task):
     def __init__(self, workflow, *args, **kwargs):
