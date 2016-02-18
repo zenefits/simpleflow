@@ -269,6 +269,7 @@ class Poller(NamedMixin, swf.actors.Actor):
             except:
                 logger.exception("[%s] Unknow exception when polling on domain %s. Sleep for 1s.", self.name, self.domain.name)
                 time.sleep(1)
+                continue
 
             self.process(task)
 
