@@ -130,11 +130,13 @@ class ActivityWorker(object):
         try:
             poller._complete(token, json.dumps(result))
         except Exception as err:
-            logger.exception(err)
-            reason = 'cannot complete task {}: {}'.format(
+            tb = traceback.format_exc()
+            reason = 'cannot complete task {}: {} {}'.format(
                 task.activity_id,
                 err,
+                tb
             )
+            logger.exception(reason)
             poller.fail(token, task, reason)
 
 

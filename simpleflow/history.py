@@ -153,6 +153,12 @@ class History(object):
                 activity['retry'] = 0
             else:
                 activity['retry'] += 1
+        elif event.state == 'cancel_requested':
+            activity = self._activities[event.activity_id]
+            activity['state'] = event.state
+            if hasattr(event, 'details'):
+                activity['details'] = event.details
+            activity['cancel_requested_timestamp'] = event.timestamp
         elif event.state == 'canceled':
             activity = get_activity(event)
             activity['state'] = event.state
