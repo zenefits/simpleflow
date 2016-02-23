@@ -114,6 +114,8 @@ class DeciderPoller(swf.actors.Decider, Poller):
     def process(self, task):
         token, history = task
 
+        self.init_thread_local(history)
+
         logger.info('taking decision for workflow {}'.format(
             self._workflow_name))
         decisions = self.decide(history)
@@ -122,7 +124,17 @@ class DeciderPoller(swf.actors.Decider, Poller):
                 self._workflow_name))
             self._complete(token, decisions)
         except Exception as err:
-            logger.error('cannot complete decision: {}'.format(err))
+            tb = traceback.format_exc()
+            logger.error('cannot complete decision: {} {}'.format(err, tb))
+
+    def init_thread_local(self, history):
+        import uuid
+        from simpleflow.swf.process.actor import thread_local
+        thread_local.activity_id = uuid.uuid4()
+
+        if len(history) > 0:
+            workflow_started_event = history[0]
+            thread_local.workflow_input = getattr(workflow_started_event, 'input', '')
 
     @with_state('deciding')
     def decide(self, history):
@@ -147,14 +159,14 @@ class DeciderWorker(object):
 
         """
         self._workflow_name = history[0].workflow_type['name']
-        workflow_executor = self._workflows[self._workflow_name]
         try:
+            workflow_executor = self._workflows[self._workflow_name]
             decisions = workflow_executor.replay(history)
             if isinstance(decisions, tuple) and len(decisions) == 2:  # (decisions, context)
                 decisions = decisions[0]
         except Exception as err:
             tb = traceback.format_exc()
-            message = "workflow decision failed: {}".format(err)
+            message = "workflow decision failed: {}, {}".format(error, tb)
             logger.error(message)
             decision = swf.models.decision.WorkflowExecutionDecision()
             decision.fail(reason=swf.format.reason(message), details=tb)

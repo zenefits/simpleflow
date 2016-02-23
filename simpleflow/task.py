@@ -61,10 +61,12 @@ class ActivityTask(Task):
 
     def execute(self):
         method = self.activity._callable
+        kwargs = self.kwargs
+
         if hasattr(method, 'execute'):
-            return method(*self.args, **self.kwargs).execute()
+            return method(*self.args, **kwargs).execute()
         else:
-            return method(*self.args, **self.kwargs)
+            return method(*self.args, **kwargs)
 
 class WorkflowTask(Task):
     def __init__(self, workflow, *args, **kwargs):

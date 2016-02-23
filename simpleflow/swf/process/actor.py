@@ -16,9 +16,11 @@ import swf.actors
 
 from simpleflow import utils
 from simpleflow.exceptions import TaskCancelled
+import threading
+from threading import Event
 
 logger = logging.getLogger(__name__)
-
+thread_local = threading.local()
 
 __all__ = ['Supervisor', 'Poller']
 
@@ -172,6 +174,7 @@ class Poller(NamedMixin, swf.actors.Actor):
                  task_list=None,
                  *args, **kwargs):
         self.is_alive = False
+        self.is_shutdown = Event()
         swf.actors.Actor.__init__(self, domain, task_list)
         super(Poller, self).__init__(
             domain,
@@ -229,6 +232,7 @@ class Poller(NamedMixin, swf.actors.Actor):
                 self.identity,
             )
             self.is_alive = False
+            self.is_shutdown.set()
             self.stop(graceful=True)
 
         # optionnally use faulthandler if available
@@ -266,6 +270,7 @@ class Poller(NamedMixin, swf.actors.Actor):
             except:
                 logger.exception("[%s] Unknow exception when polling on domain %s. Sleep for 1s.", self.name, self.domain.name)
                 time.sleep(1)
+                continue
 
             self.process(task)
 
