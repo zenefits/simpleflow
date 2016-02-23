@@ -122,7 +122,7 @@ class ActivityWorker(object):
             input = json.loads(task.input)
             args = input.get('args', ())
             kwargs = input.get('kwargs', {})
-            result = ActivityTask(activity, self.is_shutdown, *args, **kwargs).execute()
+            result = ActivityTask(activity, is_shutdown=self.is_shutdown, *args, **kwargs).execute()
         except TaskCancelled:
             raise
         except Exception as err:
