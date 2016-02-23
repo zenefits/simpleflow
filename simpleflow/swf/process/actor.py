@@ -16,10 +16,11 @@ import swf.actors
 
 from simpleflow import utils
 from simpleflow.exceptions import TaskCancelled
+import threading
 from threading import Event
 
 logger = logging.getLogger(__name__)
-
+thread_local = threading.local()
 
 __all__ = ['Supervisor', 'Poller']
 

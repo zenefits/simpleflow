@@ -114,6 +114,8 @@ class DeciderPoller(swf.actors.Decider, Poller):
     def process(self, task):
         token, history = task
 
+        self.init_thread_local(history)
+
         logger.info('taking decision for workflow {}'.format(
             self._workflow_name))
         decisions = self.decide(history)
@@ -124,6 +126,15 @@ class DeciderPoller(swf.actors.Decider, Poller):
         except Exception as err:
             tb = traceback.format_exc()
             logger.error('cannot complete decision: {} {}'.format(err, tb))
+
+    def init_thread_local(self, history):
+        import uuid
+        from simpleflow.swf.process.actor import thread_local
+        thread_local.activity_id = uuid.uuid4()
+
+        if len(history) > 0:
+            workflow_started_event = history[0]
+            thread_local.workflow_input = getattr(workflow_started_event, 'input', '')
 
     @with_state('deciding')
     def decide(self, history):

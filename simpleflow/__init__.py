@@ -12,4 +12,4 @@ __version__ = '0.10.1.1'
 __author__ = 'Greg Leclercq'
 __license__ = "MIT"
 
-logging.config.dictConfig(settings.base.load()['LOGGING'])
+# logging.config.dictConfig(settings.base.load()['LOGGING'])
