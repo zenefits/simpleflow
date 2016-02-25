@@ -81,7 +81,7 @@ DEPS = [
 
 def install_simple_workflow():
     import pip
-    pip.main(['install', 'https://s3-us-west-2.amazonaws.com/zenefits-packages/python-simple-workflow-0.1.56.2.tar.gz'])
+    pip.main(['install', '-U', 'https://s3-us-west-2.amazonaws.com/zenefits-packages/python-simple-workflow-0.1.56.2.tar.gz'])
 
 
 def main():
