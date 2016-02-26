@@ -70,18 +70,18 @@ def read(fname):
     return content
 
 DEPS = [
-    'simple-workflow==0.1.56.2',
+    'simple-workflow==0.1.56.3',
     'tabulate==0.7.3',
-    'setproctitle',
-    'subprocess32',
-    'click',
-    'psutil',
+    'setproctitle==1.1.9',
+    'subprocess32==3.2.6',
+    'click==6.3',
+    'psutil==4.0.0',
 ]
 
 
 def install_simple_workflow():
     import pip
-    pip.main(['install', '-U', 'https://s3-us-west-2.amazonaws.com/zenefits-packages/python-simple-workflow-0.1.56.2.tar.gz'])
+    pip.main(['install', '-U', 'https://s3-us-west-2.amazonaws.com/zenefits-packages/python-simple-workflow-0.1.56.3.tar.gz'])
 
 
 def main():
