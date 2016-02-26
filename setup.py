@@ -70,19 +70,12 @@ def read(fname):
     return content
 
 DEPS = [
-    'simple-workflow==0.1.56.3',
     'tabulate==0.7.3',
     'setproctitle==1.1.9',
     'subprocess32==3.2.6',
     'click==6.3',
     'psutil==4.0.0',
 ]
-
-
-def install_simple_workflow():
-    import pip
-    pip.main(['install', '-U', 'https://s3-us-west-2.amazonaws.com/zenefits-packages/python-simple-workflow-0.1.56.3.tar.gz'])
-
 
 def main():
     setup(
@@ -101,6 +94,9 @@ def main():
         license=read("LICENSE"),
         zip_safe=False,
         keywords='simpleflow',
+        dependency_links=[
+            'https://s3-us-west-2.amazonaws.com/zenefits-packages/python-simple-workflow-0.1.56.3.tar.gz'
+        ],
         classifiers=[
             'Development Status :: 2 - Pre-Alpha',
             'Intended Audience :: Developers',
@@ -123,5 +119,4 @@ def main():
     )
 
 if __name__ == '__main__':
-    install_simple_workflow()
     main()
