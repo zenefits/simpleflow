@@ -271,8 +271,7 @@ def start_heartbeat(poller, token, task, isTaskFinished, heartbeat, pid, soft_ca
                     if (now - cancel_requested_at[1]).total_seconds() >= 60:
                         logger.error('[SWF][Worker][Heartbeat][%s] Hard cancellation sent at [%s]. Now forcing exiting the worker process. ', task.activity_type.name, cancel_requested_at[1].isoformat())
 
-                        import sys
-                        sys.exit(-1)
+                        os.kill(int(pid), signal.SIGKILL)
 
             else:
                 logger.info('[SWF][Worker][Heartbeat][%s] Soft cancellation sent at [%s]. Waiting the task to be cancelled. ', task.activity_type.name, cancel_requested_at[0].isoformat())
