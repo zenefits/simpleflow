@@ -382,7 +382,7 @@ class Executor(executor.Executor):
             reason = 'Workflow execution error in task {}: "{}"'.format(
                 err.task.name,
                 getattr(err.exception, 'reason', repr(err.exception)))
-            logger.exception(reason)
+            logger.info(reason)
 
             details = getattr(err.exception, 'details', None)
 

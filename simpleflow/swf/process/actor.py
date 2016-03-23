@@ -264,8 +264,14 @@ class Poller(NamedMixin, swf.actors.Actor):
 
         while self.is_alive:
             try:
+                logger.info("polling task. Domain: [%s]. Name: [%s].", self.domain.name, self.name)
+                start = time.time()
                 task = self._poll(self.task_list, self.identity)
+                end = time.time()
+                delta = end - start
+                logger.info("polling task finished. Domain: [{0}]. Name: [{1}]. Duration: [{2:.5f}s]".format(self.domain.name, self.name, delta))
             except swf.exceptions.PollTimeout:
+                logger.info("PollTimeout. Domain: [%s]. Name: [%s].", self.domain.name, self.name)
                 continue
             except:
                 logger.exception("[%s] Unknow exception when polling on domain %s. Sleep for 1s.", self.name, self.domain.name)
@@ -304,7 +310,7 @@ class Poller(NamedMixin, swf.actors.Actor):
             # This embarasing because the decider cannot notify SWF of the
             # task completion. As it will not try again, the task will
             # timeout (start_to_complete).
-            logger.exception("cannot complete task: %s", str(err))
+            logger.info("cannot complete task: %s", str(err))
 
     @abc.abstractmethod
     def poll(self, task_list, identity):
