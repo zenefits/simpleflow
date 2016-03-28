@@ -392,7 +392,12 @@ class Executor(executor.Executor):
             if self._workflow.is_daemon:
                 # do not fail daemon workflow
                 logger.info('Task failed. Re-running continue_as_new for the daemon workflow.')
-                decision.continue_as_new(input=input, task_list={ 'name': self.task_list }, task_timeout=str(self._workflow.decision_tasks_timeout))
+                decision.continue_as_new(
+                    input=input,
+                    task_list={ 'name': self.task_list },
+                    task_timeout=str(self._workflow.decision_tasks_timeout),
+                    execution_timeout=str(self._workflow.execution_timeout),
+                    workflow_type_version=str(self._workflow.version))
             else:
                 decision.fail(
                     reason=swf.format.reason(reason),
