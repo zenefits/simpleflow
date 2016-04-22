@@ -166,7 +166,7 @@ class DeciderWorker(object):
                 decisions = decisions[0]
         except Exception as err:
             tb = traceback.format_exc()
-            message = "workflow decision failed: {}, {}".format(error, tb)
+            message = "workflow decision failed: {}, {}".format(err, tb)
             logger.error(message)
             decision = swf.models.decision.WorkflowExecutionDecision()
             decision.fail(reason=swf.format.reason(message), details=tb)

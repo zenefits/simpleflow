@@ -175,6 +175,7 @@ class Poller(NamedMixin, swf.actors.Actor):
                  *args, **kwargs):
         self.is_alive = False
         self.is_shutdown = Event()
+        self.max_restart_count = None
         swf.actors.Actor.__init__(self, domain, task_list)
         super(Poller, self).__init__(
             domain,
@@ -262,6 +263,8 @@ class Poller(NamedMixin, swf.actors.Actor):
         self.set_process_name()
         self.bind_signal_handlers()
 
+        tasks_completed_count = 1;
+
         while self.is_alive:
             try:
                 logger.info("polling task. Domain: [%s]. Name: [%s].", self.domain.name, self.name)
@@ -279,6 +282,12 @@ class Poller(NamedMixin, swf.actors.Actor):
                 continue
 
             self.process(task)
+
+            tasks_completed_count = tasks_completed_count + 1
+            if self.max_restart_count and tasks_completed_count >= self.max_restart_count:
+                # the parent controller - supervisord in our case, will restart worker
+                logger.info("Worker has completed %s tasks. Exiting. Domain: [%s]. Name: [%s].", tasks_completed_count, self.domain.name, self.name)
+                break
 
     @with_state('stopping')
     def stop(self, graceful=True, join_timeout=60):

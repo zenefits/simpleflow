@@ -43,14 +43,14 @@ class ActivityPoller(Poller, swf.actors.ActivityWorker):
     Polls an activity and handles it in the worker.
 
     """
-    def __init__(self, domain, task_list, workflow, heartbeat=60, soft_cancel_wait_period=180,
-                 *args, **kwargs):
+    def __init__(self, domain, task_list, workflow, heartbeat=60, soft_cancel_wait_period=180, max_restart_count=3000, *args, **kwargs):
         self._workflow = workflow
         self.nb_retries = 3
         self._heartbeat = heartbeat
         self._soft_cancel_wait_period = soft_cancel_wait_period
         self.is_alive = True
         self.is_shutdown = Event()
+        self.max_restart_count = max_restart_count
 
         swf.actors.ActivityWorker.__init__(
             self,
@@ -192,6 +192,20 @@ def registerTaskCancelHandler(isTaskFinished, poller, task):
     signal.signal(signal.SIGUSR1, signal_task_cancellation)
     signal.signal(signal.SIGUSR2, signal_task_cancellation)
 
+
+def kill_all_children():
+    # kill any leftover child processes
+    try:
+        us = os.getpid()
+        p = psutil.Process(us)
+        for child in p.children(recursive=True):
+            logger.info('killing children: %s' % child.__dict__)
+            child.kill()
+    except:
+        logger.info("Killing child processes failed.")
+        import traceback
+        traceback.print_exc()
+
 def run_in_proc(poller, token, task, activity_id, heartbeat=60, soft_cancel_wait_period=180, is_shutdown=None):
     pid = os.getpid()
     isTaskFinished = threading.Event()
@@ -228,6 +242,8 @@ def run_in_proc(poller, token, task, activity_id, heartbeat=60, soft_cancel_wait
         isTaskFinished.set()
         # let's wait for the heartbeat thread to die
         heartbeat_thread.join()
+
+        kill_all_children()
 
     if isTaskCancelled:
         logger.info('[SWF][Worker][%s] Reporting task is cancelled.', task.activity_type.name)
