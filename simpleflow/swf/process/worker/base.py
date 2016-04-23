@@ -202,9 +202,49 @@ def kill_all_children():
             logger.info('killing children: %s' % child.__dict__)
             child.kill()
     except:
-        logger.info("Killing child processes failed.")
-        import traceback
-        traceback.print_exc()
+        logger.info("Killing child processes failed. %s" % traceback.format_exc())
+
+UNITS = (
+    (2 ** 40.0, 'TB'),
+    (2 ** 30.0, 'GB'),
+    (2 ** 20.0, 'MB'),
+    (2 ** 10.0, 'kB'),
+    (0.0, '{0!d}b'),
+)
+
+def hfloat(f, p=5):
+    """Convert float to value suitable for humans.
+    :keyword p: Float precision.
+    """
+    i = int(f)
+    return i if i == f else '{0:.{p}}'.format(f, p=p)
+
+
+def humanbytes(s):
+    """Convert bytes to human-readable form (e.g. kB, MB)."""
+    return next(
+        '{0}{1}'.format(hfloat(s / div if div else s), unit)
+        for div, unit in UNITS if s >= div
+    )
+
+def get_memory_usage():
+
+    try:
+        p = psutil.Process(os.getpid())
+        return humanbytes(p.memory_info().rss)
+    except:
+        logger.info('get_memory_usage failed. %s' % traceback.format_exc())
+
+
+def cleanup_memory():
+    try:
+        import gc
+        gc.collect()
+
+        logger.info('RAM - RSS after gc collect: %s' % get_memory_usage())
+    except:
+        logger.info('cleanup_memory failed. %s' % traceback.format_exc())
+
 
 def run_in_proc(poller, token, task, activity_id, heartbeat=60, soft_cancel_wait_period=180, is_shutdown=None):
     pid = os.getpid()
@@ -218,6 +258,9 @@ def run_in_proc(poller, token, task, activity_id, heartbeat=60, soft_cancel_wait
     heartbeat_thread.start()
 
     isTaskCancelled = False
+
+    logger.info('RAM - RSS before running task: %s' % get_memory_usage())
+
     # start processing the task
     try:
         try:
@@ -244,6 +287,9 @@ def run_in_proc(poller, token, task, activity_id, heartbeat=60, soft_cancel_wait
         heartbeat_thread.join()
 
         kill_all_children()
+
+        cleanup_memory()
+
 
     if isTaskCancelled:
         logger.info('[SWF][Worker][%s] Reporting task is cancelled.', task.activity_type.name)
