@@ -43,7 +43,7 @@ class ActivityPoller(Poller, swf.actors.ActivityWorker):
     Polls an activity and handles it in the worker.
 
     """
-    def __init__(self, domain, task_list, workflow, heartbeat=60, soft_cancel_wait_period=180, max_restart_count=3000, *args, **kwargs):
+    def __init__(self, domain, task_list, workflow, heartbeat=60, soft_cancel_wait_period=180, max_restart_count=3000, max_RSS_restart=5000, *args, **kwargs):
         self._workflow = workflow
         self.nb_retries = 3
         self._heartbeat = heartbeat
@@ -51,6 +51,7 @@ class ActivityPoller(Poller, swf.actors.ActivityWorker):
         self.is_alive = True
         self.is_shutdown = Event()
         self.max_restart_count = max_restart_count
+        self.max_RSS_restart = max_RSS_restart
 
         swf.actors.ActivityWorker.__init__(
             self,
@@ -75,7 +76,7 @@ class ActivityPoller(Poller, swf.actors.ActivityWorker):
         token, task = request
         activityId = uuid.uuid4()
         init_thread_local(task, activityId)
-        run_in_proc(self, token, task, activityId, self._heartbeat, self._soft_cancel_wait_period, self.is_shutdown)
+        return run_in_proc(self, token, task, activityId, self._heartbeat, self._soft_cancel_wait_period, self.is_shutdown, self.max_RSS_restart)
 
     @with_state('completing')
     def complete(self, token, result):
@@ -204,34 +205,24 @@ def kill_all_children():
     except:
         logger.info("Killing child processes failed. %s" % traceback.format_exc())
 
-UNITS = (
-    (2 ** 40.0, 'TB'),
-    (2 ** 30.0, 'GB'),
-    (2 ** 20.0, 'MB'),
-    (2 ** 10.0, 'kB'),
-    (0.0, '{0!d}b'),
-)
 
 def hfloat(f, p=5):
     """Convert float to value suitable for humans.
     :keyword p: Float precision.
     """
     i = int(f)
-    return i if i == f else '{0:.{p}}'.format(f, p=p)
+    return float(i if i == f else '{0:.{p}}'.format(f, p=p))
 
 
-def humanbytes(s):
-    """Convert bytes to human-readable form (e.g. kB, MB)."""
-    return next(
-        '{0}{1}'.format(hfloat(s / div if div else s), unit)
-        for div, unit in UNITS if s >= div
-    )
+def humanMB(s):
+    """Convert bytes to MB."""
+    return hfloat(s / (2 ** 20.0))
 
 def get_memory_usage():
 
     try:
         p = psutil.Process(os.getpid())
-        return humanbytes(p.memory_info().rss)
+        return humanMB(p.memory_info().rss)
     except:
         logger.info('get_memory_usage failed. %s' % traceback.format_exc())
 
@@ -240,13 +231,13 @@ def cleanup_memory():
     try:
         import gc
         gc.collect()
-
-        logger.info('RAM - RSS after gc collect: %s' % get_memory_usage())
     except:
         logger.info('cleanup_memory failed. %s' % traceback.format_exc())
 
 
-def run_in_proc(poller, token, task, activity_id, heartbeat=60, soft_cancel_wait_period=180, is_shutdown=None):
+def run_in_proc(poller, token, task, activity_id, heartbeat=60, soft_cancel_wait_period=180, is_shutdown=None, max_RSS_restart=5000):
+    to_restart = False
+
     pid = os.getpid()
     isTaskFinished = threading.Event()
 
@@ -259,7 +250,9 @@ def run_in_proc(poller, token, task, activity_id, heartbeat=60, soft_cancel_wait
 
     isTaskCancelled = False
 
-    logger.info('RAM - RSS before running task: %s' % get_memory_usage())
+    rss_before = get_memory_usage()
+
+    logger.info('RAM - RSS before running task: %sMB' % rss_before)
 
     # start processing the task
     try:
@@ -290,6 +283,15 @@ def run_in_proc(poller, token, task, activity_id, heartbeat=60, soft_cancel_wait
 
         cleanup_memory()
 
+        rss_after = get_memory_usage()
+        rss_delta = rss_after - rss_before
+
+        logger.info('RAM - RSS delta for this activity: %sMB. Current RSS: %sMB' % (rss_delta, rss_after))
+
+        if rss_after > max_RSS_restart:
+            logger.info('RAM - RSS after GC collect is beyond %sMB. Restarting the worker.' % rss_after)
+            to_restart = True
+
 
     if isTaskCancelled:
         logger.info('[SWF][Worker][%s] Reporting task is cancelled.', task.activity_type.name)
@@ -300,6 +302,7 @@ def run_in_proc(poller, token, task, activity_id, heartbeat=60, soft_cancel_wait
             logger.info('[SWF][Worker][%s] Failed to send task cancel confirmation to swf. Ignore. ', task.activity_type.name)
 
     logger.info('[SWF][Worker][%s] Heartbeat thread stopped. ', task.activity_type.name)
+    return to_restart
 
 
 def start_heartbeat(poller, token, task, isTaskFinished, heartbeat, pid, soft_cancel_wait_period, activity_id):

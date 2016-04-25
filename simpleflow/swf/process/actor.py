@@ -281,12 +281,16 @@ class Poller(NamedMixin, swf.actors.Actor):
                 time.sleep(1)
                 continue
 
-            self.process(task)
+            restart = self.process(task)
 
             tasks_completed_count = tasks_completed_count + 1
             if self.max_restart_count and tasks_completed_count >= self.max_restart_count:
                 # the parent controller - supervisord in our case, will restart worker
                 logger.info("Worker has completed %s tasks. Exiting. Domain: [%s]. Name: [%s].", tasks_completed_count, self.domain.name, self.name)
+                break
+
+            if restart:
+                logger.info("Processed task returned restart signal. Exiting the worker. Domain: [%s]. Name: [%s].", self.domain.name, self.name)
                 break
 
     @with_state('stopping')
