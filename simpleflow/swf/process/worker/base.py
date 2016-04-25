@@ -289,7 +289,7 @@ def run_in_proc(poller, token, task, activity_id, heartbeat=60, soft_cancel_wait
         logger.info('RAM - RSS delta for this activity: %sMB. Current RSS: %sMB' % (rss_delta, rss_after))
 
         if rss_after > max_RSS_restart:
-            logger.info('RAM - RSS after GC collect is beyond %sMB. Restarting the worker.' % rss_after)
+            logger.info('RAM - RSS after GC collect is beyond %sMB. Restarting the worker.' % max_RSS_restart)
             to_restart = True
 
 
