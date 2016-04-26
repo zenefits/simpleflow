@@ -202,6 +202,7 @@ def kill_all_children():
         for child in p.children(recursive=True):
             logger.info('killing children: %s' % child.__dict__)
             child.kill()
+            child.wait(5)
     except:
         logger.info("Killing child processes failed. %s" % traceback.format_exc())
 
