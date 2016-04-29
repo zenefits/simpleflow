@@ -23,6 +23,8 @@ from simpleflow.exceptions import TaskCancelled
 from datetime import datetime
 from threading import Event
 import uuid
+from contextlib import contextmanager
+import socket
 
 logger = logging.getLogger(__name__)
 
@@ -43,7 +45,7 @@ class ActivityPoller(Poller, swf.actors.ActivityWorker):
     Polls an activity and handles it in the worker.
 
     """
-    def __init__(self, domain, task_list, workflow, heartbeat=60, soft_cancel_wait_period=180, max_restart_count=3000, max_RSS_restart=5000, *args, **kwargs):
+    def __init__(self, domain, task_list, workflow, heartbeat=60, soft_cancel_wait_period=180, max_restart_count=3000, max_RSS_restart=5000, socket_timeout=120, *args, **kwargs):
         self._workflow = workflow
         self.nb_retries = 3
         self._heartbeat = heartbeat
@@ -52,6 +54,7 @@ class ActivityPoller(Poller, swf.actors.ActivityWorker):
         self.is_shutdown = Event()
         self.max_restart_count = max_restart_count
         self.max_RSS_restart = max_RSS_restart
+        self.socket_timeout = socket_timeout
 
         swf.actors.ActivityWorker.__init__(
             self,
@@ -76,7 +79,7 @@ class ActivityPoller(Poller, swf.actors.ActivityWorker):
         token, task = request
         activityId = uuid.uuid4()
         init_thread_local(task, activityId)
-        return run_in_proc(self, token, task, activityId, self._heartbeat, self._soft_cancel_wait_period, self.is_shutdown, self.max_RSS_restart)
+        return run_in_proc(self, token, task, activityId, self._heartbeat, self._soft_cancel_wait_period, self.is_shutdown, self.max_RSS_restart, self.socket_timeout)
 
     @with_state('completing')
     def complete(self, token, result):
@@ -235,8 +238,15 @@ def cleanup_memory():
     except:
         logger.info('cleanup_memory failed. %s' % traceback.format_exc())
 
+@contextmanager
+def default_socket_timeout(timeout):
+    prev = socket.getdefaulttimeout()
+    socket.setdefaulttimeout(timeout)
+    yield
+    socket.setdefaulttimeout(prev)
 
-def run_in_proc(poller, token, task, activity_id, heartbeat=60, soft_cancel_wait_period=180, is_shutdown=None, max_RSS_restart=5000):
+
+def run_in_proc(poller, token, task, activity_id, heartbeat=60, soft_cancel_wait_period=180, is_shutdown=None, max_RSS_restart=5000, socket_timeout=120):
     to_restart = False
 
     pid = os.getpid()
@@ -259,7 +269,10 @@ def run_in_proc(poller, token, task, activity_id, heartbeat=60, soft_cancel_wait
     try:
         try:
             logger.info('[SWF][Worker][%s] Start processing task. ', task.activity_type.name)
-            process_task(poller, token, task, is_shutdown)
+
+            with default_socket_timeout(socket_timeout):
+                process_task(poller, token, task, is_shutdown)
+
             logger.info('[SWF][Worker][%s] Finished processing task. ', task.activity_type.name)
         except TaskCancelled:
             # task is cancelled by the heartbeat thread from swf

@@ -9,7 +9,7 @@ from .base import (
 )
 
 
-def make_worker_poller(workflow, domain, task_list, heartbeat, soft_cancel_wait_period, max_restart_count, max_RSS_restart):
+def make_worker_poller(workflow, domain, task_list, heartbeat, soft_cancel_wait_period, max_restart_count, max_RSS_restart, socket_timeout):
     domain = swf.models.Domain(domain)
     return ActivityPoller(
         domain,
@@ -18,7 +18,8 @@ def make_worker_poller(workflow, domain, task_list, heartbeat, soft_cancel_wait_
         heartbeat,
         soft_cancel_wait_period,
         max_restart_count=max_restart_count,
-        max_RSS_restart=max_RSS_restart
+        max_RSS_restart=max_RSS_restart,
+        socket_timeout=socket_timeout
     )
 
 
