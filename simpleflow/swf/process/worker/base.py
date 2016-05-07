@@ -341,6 +341,8 @@ def start_heartbeat(poller, token, task, isTaskFinished, heartbeat, pid, soft_ca
 
                 if cancel_requested_at[1] == None:
                     logger.info('[SWF][Worker][Heartbeat][%s] Sending signal SIGUSR2 for hard cancellation. ', task.activity_type.name)
+                    logger.error('[SWF][Worker][%s] Task hit hard timeout limit. Task will be forced exited. ', task.input)
+
                     os.kill(int(pid), signal.SIGUSR2)
                     cancel_requested_at[1] = datetime.utcnow()
                 else:
@@ -348,7 +350,7 @@ def start_heartbeat(poller, token, task, isTaskFinished, heartbeat, pid, soft_ca
 
                     # exit the process after 1 min the hard timeout is sent
                     if (now - cancel_requested_at[1]).total_seconds() >= 60:
-                        logger.error('[SWF][Worker][Heartbeat][%s] Hard cancellation sent at [%s]. Now forcing exiting the worker process. ', task.activity_type.name, cancel_requested_at[1].isoformat())
+                        logger.info('[SWF][Worker][Heartbeat][%s] Hard cancellation sent at [%s]. Now forcing exiting the worker process. ', task.activity_type.name, cancel_requested_at[1].isoformat())
 
                         os.kill(int(pid), signal.SIGKILL)
 
