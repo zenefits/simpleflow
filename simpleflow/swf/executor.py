@@ -251,6 +251,12 @@ class Executor(executor.Executor):
                 future = self.resume_activity(task, event)
                 if future and future._state in (futures.PENDING, futures.RUNNING):
                     self._open_activity_count += 1
+                if future and future.cancelled:
+                    cancel_decision = swf.models.decision.WorkflowExecutionDecision()
+                    cancel_decision.cancel()
+                    self._decisions.append(cancel_decision)
+                    raise exceptions.ExecutionBlocked()
+
             elif event['type'] == 'child_workflow':
                 future = self.resume_child_workflow(task, event)
 

@@ -1,6 +1,7 @@
 import swf.models
 
 from simpleflow import task
+from simpleflow.settings import default
 
 
 class ActivityTask(task.ActivityTask):
@@ -42,8 +43,11 @@ class ActivityTask(task.ActivityTask):
         task_timeout_override = self.kwargs.get('task_start_to_close_timeout', None)
 
         if task_timeout_override != None:
-            task_timeout = str(task_timeout_override)
-            duration_timeout = str(task_timeout_override)
+            task_timeout_int = int(task_timeout_override) + int(default.ACTIVITY_SOFT_TIMEOUT_BUFFER) + int(default.ACTIVITY_HARD_TIMEOUT_BUFFER)
+            duration_timeout_int = str(task_timeout_int + int(default.ACTIVITY_SCHEDULE_TO_START_TIMEOUT))
+
+            task_timeout = str(task_timeout_int)
+            duration_timeout = str(duration_timeout_int)
 
         decision = swf.models.decision.ActivityTaskDecision(
             'schedule',

@@ -27,7 +27,7 @@ from simpleflow import (
 )
 from simpleflow.swf import constants
 from simpleflow.swf.executor import Executor
-
+from simpleflow.settings import default
 
 from .data import (
     DOMAIN,
@@ -91,7 +91,7 @@ def test_workflow_with_timeout_override():
     # The executor should only schedule the *increment* task.
     decisions, _ = executor.replay(history)
 
-    assert decisions[0]['scheduleActivityTaskDecisionAttributes']['startToCloseTimeout'] == '100'
+    assert decisions[0]['scheduleActivityTaskDecisionAttributes']['startToCloseTimeout'] == str(100 + int(default.ACTIVITY_SOFT_TIMEOUT_BUFFER) + int(default.ACTIVITY_HARD_TIMEOUT_BUFFER))
 
 
 def test_workflow_with_input():

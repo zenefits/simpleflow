@@ -25,6 +25,7 @@ from threading import Event
 import uuid
 from contextlib import contextmanager
 import socket
+from simpleflow.settings import default
 
 logger = logging.getLogger(__name__)
 
@@ -45,11 +46,10 @@ class ActivityPoller(Poller, swf.actors.ActivityWorker):
     Polls an activity and handles it in the worker.
 
     """
-    def __init__(self, domain, task_list, workflow, heartbeat=60, soft_cancel_wait_period=180, max_restart_count=3000, max_RSS_restart=5000, socket_timeout=120, *args, **kwargs):
+    def __init__(self, domain, task_list, workflow, heartbeat=60, max_restart_count=3000, max_RSS_restart=5000, socket_timeout=120, *args, **kwargs):
         self._workflow = workflow
         self.nb_retries = 3
         self._heartbeat = heartbeat
-        self._soft_cancel_wait_period = soft_cancel_wait_period
         self.is_alive = True
         self.is_shutdown = Event()
         self.max_restart_count = max_restart_count
@@ -79,7 +79,7 @@ class ActivityPoller(Poller, swf.actors.ActivityWorker):
         token, task = request
         activityId = uuid.uuid4()
         init_thread_local(task, activityId)
-        return run_in_proc(self, token, task, activityId, self._heartbeat, self._soft_cancel_wait_period, self.is_shutdown, self.max_RSS_restart, self.socket_timeout)
+        return run_in_proc(self, token, task, activityId, self._heartbeat, self.is_shutdown, self.max_RSS_restart, self.socket_timeout)
 
     @with_state('completing')
     def complete(self, token, result):
@@ -127,8 +127,6 @@ class ActivityWorker(object):
             args = input.get('args', ())
             kwargs = input.get('kwargs', {})
             result = ActivityTask(activity, is_shutdown=self.is_shutdown, *args, **kwargs).execute()
-        except TaskCancelled:
-            raise
         except Exception as err:
             tb = traceback.format_exc()
             logger.exception(err)
@@ -246,7 +244,7 @@ def default_socket_timeout(timeout):
     socket.setdefaulttimeout(prev)
 
 
-def run_in_proc(poller, token, task, activity_id, heartbeat=60, soft_cancel_wait_period=180, is_shutdown=None, max_RSS_restart=5000, socket_timeout=120):
+def run_in_proc(poller, token, task, activity_id, heartbeat=60, is_shutdown=None, max_RSS_restart=5000, socket_timeout=120):
     to_restart = False
 
     pid = os.getpid()
@@ -255,11 +253,9 @@ def run_in_proc(poller, token, task, activity_id, heartbeat=60, soft_cancel_wait
     registerTaskCancelHandler(isTaskFinished, poller, task)
 
     # start the heartbeat thread
-    heartbeat_thread = threading.Thread(target=start_heartbeat, args=(poller, token, task, isTaskFinished, heartbeat, pid, soft_cancel_wait_period, activity_id))
+    heartbeat_thread = threading.Thread(target=start_heartbeat, args=(poller, token, task, isTaskFinished, heartbeat, pid, activity_id))
     heartbeat_thread.setDaemon(True)
     heartbeat_thread.start()
-
-    isTaskCancelled = False
 
     rss_before = get_memory_usage()
 
@@ -274,18 +270,12 @@ def run_in_proc(poller, token, task, activity_id, heartbeat=60, soft_cancel_wait
                 process_task(poller, token, task, is_shutdown)
 
             logger.info('[SWF][Worker][%s] Finished processing task. ', task.activity_type.name)
-        except TaskCancelled:
-            # task is cancelled by the heartbeat thread from swf
-            isTaskCancelled = True
 
         finally:
             # task finished. Let's finish the heartbeat thread
             isTaskFinished.set()
             # let's wait for the heartbeat thread to die
             heartbeat_thread.join()
-    except TaskCancelled:
-        # race condition to prevent TaskCancelled exception raised in the finally block above
-        isTaskCancelled = True
 
     finally:
         # task finished. Let's finish the heartbeat thread
@@ -307,20 +297,17 @@ def run_in_proc(poller, token, task, activity_id, heartbeat=60, soft_cancel_wait
             to_restart = True
 
 
-    if isTaskCancelled:
-        logger.info('[SWF][Worker][%s] Reporting task is cancelled.', task.activity_type.name)
-
-        try:
-            poller.cancel(token)
-        except:
-            logger.info('[SWF][Worker][%s] Failed to send task cancel confirmation to swf. Ignore. ', task.activity_type.name)
-
     logger.info('[SWF][Worker][%s] Heartbeat thread stopped. ', task.activity_type.name)
     return to_restart
 
 
-def start_heartbeat(poller, token, task, isTaskFinished, heartbeat, pid, soft_cancel_wait_period, activity_id):
+def start_heartbeat(poller, token, task, isTaskFinished, heartbeat, pid, activity_id):
     init_thread_local(task, activity_id)
+
+    started_at = datetime.utcnow()
+    input = json.loads(task.input)
+    kwargs = input.get('kwargs', {})
+    task_timeout = int(kwargs.get('task_start_to_close_timeout', default.ACTIVITY_DEFAULT_TIMEOUT))
 
     # [soft_timeout_requested_time, hard_timeout_requested_time]
     cancel_requested_at = [None, None]
@@ -336,7 +323,7 @@ def start_heartbeat(poller, token, task, isTaskFinished, heartbeat, pid, soft_ca
             # we had sent a cancellation before.
             now = datetime.utcnow()
 
-            if (now - cancel_requested_at[0]).total_seconds() >= soft_cancel_wait_period:
+            if (now - cancel_requested_at[0]).total_seconds() >= int(default.ACTIVITY_SOFT_TIMEOUT_BUFFER):
                 # time's up. Send a hard cancellation
 
                 if cancel_requested_at[1] == None:
@@ -348,8 +335,8 @@ def start_heartbeat(poller, token, task, isTaskFinished, heartbeat, pid, soft_ca
                 else:
                     logger.info('[SWF][Worker][Heartbeat][%s] Hard cancellation sent at [%s]. Waiting the task to be cancelled. ', task.activity_type.name, cancel_requested_at[1].isoformat())
 
-                    # exit the process after 1 min the hard timeout is sent
-                    if (now - cancel_requested_at[1]).total_seconds() >= 60:
+                    # exit the process after 30s the hard timeout is sent
+                    if (now - cancel_requested_at[1]).total_seconds() >= 30:
                         logger.info('[SWF][Worker][Heartbeat][%s] Hard cancellation sent at [%s]. Now forcing exiting the worker process. ', task.activity_type.name, cancel_requested_at[1].isoformat())
 
                         os.kill(int(pid), signal.SIGKILL)
@@ -359,6 +346,13 @@ def start_heartbeat(poller, token, task, isTaskFinished, heartbeat, pid, soft_ca
 
     while (not isTaskFinished.is_set()):
         isTaskFinished.wait(heartbeat)
+
+        task_duration = (datetime.utcnow() - started_at).total_seconds()
+        if (task_duration >= task_timeout):
+            # soft timeout. Proactively killing the task
+            logger.info('[SWF][Worker][Heartbeat][%s] Task has been running for %s seconds. Stopping the task.', task.activity_type.name, task_duration)
+            try_cancel_task()
+
         if (not isTaskFinished.is_set()):
             # task is still running
             logger.info('[SWF][Worker][Heartbeat][%s] Sending heartbeat. ', task.activity_type.name)

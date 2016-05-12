@@ -146,7 +146,7 @@ class History(object):
         elif event.state == 'failed':
             activity = get_activity(event)
             activity['state'] = event.state
-            activity['reason'] = event.reason
+            activity['reason'] = getattr(event, 'reason', '')
             activity['details'] = getattr(event, 'details', '')
             activity['failed_timestamp'] = event.timestamp
             if 'retry' not in activity:
