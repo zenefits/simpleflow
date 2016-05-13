@@ -94,6 +94,11 @@ class ActivityPoller(Poller, swf.actors.ActivityWorker):
                 reason=swf.format.reason(reason),
                 details=swf.format.details(details),
             )
+        except swf.exceptions.DoesNotExistError:
+            logger.info('cannot fail task {}: {}'.format(
+                task.activity_type.name,
+                err,
+            ))
         except Exception as err:
             logger.error('cannot fail task {}: {}'.format(
                 task.activity_type.name,
@@ -134,6 +139,8 @@ class ActivityWorker(object):
 
         try:
             poller._complete(token, json.dumps(result))
+        except swf.exceptions.DoesNotExistError:
+            logger.info('cannot complete task {} due to DoesNotExistError' % task.activity_id)
         except Exception as err:
             tb = traceback.format_exc()
             reason = 'cannot complete task {}: {} {}'.format(
