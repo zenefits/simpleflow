@@ -8,7 +8,7 @@ from .workflow import Workflow  # NOQA
 from . import settings
 
 
-__version__ = '0.10.1.15'
+__version__ = '0.10.1.16'
 __author__ = 'Greg Leclercq'
 __license__ = "MIT"
 
