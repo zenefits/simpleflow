@@ -339,7 +339,7 @@ def start_heartbeat(poller, token, task, isTaskFinished, heartbeat, pid, activit
 
                 if cancel_requested_at[1] == None:
                     logger.info('[SWF][Worker][Heartbeat][%s] Sending signal SIGUSR2 for hard cancellation. ', task_identity)
-                    logger.error('[SWF][Worker][%s] Task hit hard timeout limit. Task will be forced exited. ', task_identity)
+                    logger.info('[SWF][Worker][%s] Task hit hard timeout limit. Task will be forced exited. ', task_identity)
 
                     os.kill(int(pid), signal.SIGUSR2)
                     cancel_requested_at[1] = datetime.utcnow()
