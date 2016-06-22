@@ -189,7 +189,7 @@ def registerTaskCancelHandler(isTaskFinished, poller, task):
             '[SWF][Worker] Signal %d caught. Sending TaskCancelled exception from %s. Task: [%s]',
             signum,
             poller.identity,
-            task.activity_type.name
+            task.input
         )
 
         if not isTaskFinished.is_set():
