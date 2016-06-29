@@ -19,6 +19,10 @@ from simpleflow.exceptions import TaskCancelled
 import threading
 from threading import Event
 
+from simplejson import JSONDecodeError
+
+import traceback
+
 logger = logging.getLogger(__name__)
 thread_local = threading.local()
 
@@ -276,8 +280,15 @@ class Poller(NamedMixin, swf.actors.Actor):
             except swf.exceptions.PollTimeout:
                 logger.info("PollTimeout. Domain: [%s]. Name: [%s].", self.domain.name, self.name)
                 continue
+
+            except JSONDecodeError as err:
+                tb = traceback.format_exc()
+                logger.exception("[%s] JSONDecodeError when polling on domain %s. Doc: %s. Sleep for 1s. Exception: %s", self.name, self.domain.name, err.doc, tb)
+                time.sleep(1)
+                continue
             except:
-                logger.exception("[%s] Unknow exception when polling on domain %s. Sleep for 1s.", self.name, self.domain.name)
+                tb = traceback.format_exc()
+                logger.exception("[%s] Unknow exception when polling on domain %s. Sleep for 1s. Exception: %s", self.name, self.domain.name, tb)
                 time.sleep(1)
                 continue
 
