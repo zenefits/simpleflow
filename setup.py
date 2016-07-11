@@ -95,7 +95,7 @@ def main():
         zip_safe=False,
         keywords='simpleflow',
         dependency_links=[
-            'https://s3-us-west-2.amazonaws.com/zenefits-packages/python-simple-workflow-0.1.56.5.tar.gz'
+            'https://s3-us-west-2.amazonaws.com/zenefits-packages/python-simple-workflow-0.1.56.6.tar.gz'
         ],
         classifiers=[
             'Development Status :: 2 - Pre-Alpha',
