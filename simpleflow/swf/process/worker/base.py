@@ -183,20 +183,20 @@ def init_thread_local(task, activityId):
     thread_local.activity_id = activityId
     thread_local.workflow_input = getattr(task, 'input', '')
 
-def registerTaskCancelHandler(isTaskFinished, poller, task):
+def registerTaskCancelHandler(isTaskFinished, poller, task_input):
     def signal_task_cancellation(signum, frame):
         logger.info(
             '[SWF][Worker] Signal %d caught. Sending TaskCancelled exception from %s. Task: [%s]',
             signum,
             poller.identity,
-            task.input
+            task_input
         )
 
         if not isTaskFinished.is_set():
             if signum == signal.SIGUSR1:
-                raise SoftTaskCancelled(task)
+                raise SoftTaskCancelled(task_input)
             elif signum == signal.SIGUSR2:
-                raise TaskCancelled(task)
+                raise TaskCancelled(task_input)
 
     signal.signal(signal.SIGUSR1, signal_task_cancellation)
     signal.signal(signal.SIGUSR2, signal_task_cancellation)
@@ -257,7 +257,7 @@ def run_in_proc(poller, token, task, activity_id, heartbeat=60, is_shutdown=None
     pid = os.getpid()
     isTaskFinished = threading.Event()
 
-    registerTaskCancelHandler(isTaskFinished, poller, task)
+    registerTaskCancelHandler(isTaskFinished, poller, task.input)
 
     # start the heartbeat thread
     heartbeat_thread = threading.Thread(target=start_heartbeat, args=(poller, token, task, isTaskFinished, heartbeat, pid, activity_id))
