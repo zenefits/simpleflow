@@ -283,7 +283,7 @@ class Poller(NamedMixin, swf.actors.Actor):
 
             except JSONDecodeError as err:
                 tb = traceback.format_exc()
-                logger.exception("[%s] JSONDecodeError when polling on domain %s. Doc: %s. Sleep for 1s. Exception: %s", self.name, self.domain.name, err.doc, tb)
+                logger.info("[%s] JSONDecodeError when polling on domain %s. Sleep for 1s. Exception: %s", self.name, self.domain.name, tb)
                 time.sleep(1)
                 continue
             except:
