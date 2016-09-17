@@ -135,7 +135,7 @@ class ActivityWorker(object):
         except Exception as err:
             tb = traceback.format_exc()
             logger.exception(err)
-            return poller.fail(token, task, reason=str(err), details=tb)
+            return poller.fail(token, task, reason=unicode(err), details=tb)
 
         try:
             poller._complete(token, json.dumps(result))
