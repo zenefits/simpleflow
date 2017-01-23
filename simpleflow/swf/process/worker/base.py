@@ -280,6 +280,7 @@ def run_in_proc(poller, token, task, activity_id, heartbeat=60, is_shutdown=None
 
         except:
             logger.error('[SWF][Worker][{}] Error when processing task. Exception: {}'.format(task.activity_type.name, traceback.format_exc()))
+            raise
 
         finally:
             # task finished. Let's finish the heartbeat thread
@@ -289,6 +290,8 @@ def run_in_proc(poller, token, task, activity_id, heartbeat=60, is_shutdown=None
 
     except:
         logger.error('[SWF][Worker][{}] Error when processing task. Exception: {}'.format(task.activity_type.name, traceback.format_exc()))
+        raise
+
     finally:
         # task finished. Let's finish the heartbeat thread
         isTaskFinished.set()
