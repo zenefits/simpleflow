@@ -55,7 +55,7 @@ class HeartbeatProcess(object):
                     'task {} no longer exists. Stopping heartbeat'.format(
                         task.activity_type.name))
                 return
-            except Exception as error:
+            except BaseException as error:
                 # Let's crash if it cannot notify the heartbeat failed.
                 logger.error('cannot send heartbeat for task {}: {}'.format(
                     task.activity_type.name,

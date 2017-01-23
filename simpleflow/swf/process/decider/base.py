@@ -123,7 +123,7 @@ class DeciderPoller(swf.actors.Decider, Poller):
             logger.info('completing decision for workflow {}'.format(
                 self._workflow_name))
             self._complete(token, decisions)
-        except Exception as err:
+        except BaseException as err:
             tb = traceback.format_exc()
             logger.error('cannot complete decision: {} {}'.format(err, tb))
 
@@ -164,7 +164,7 @@ class DeciderWorker(object):
             decisions = workflow_executor.replay(history)
             if isinstance(decisions, tuple) and len(decisions) == 2:  # (decisions, context)
                 decisions = decisions[0]
-        except Exception as err:
+        except BaseException as err:
             tb = traceback.format_exc()
             message = "workflow decision failed: {}, {}".format(err, tb)
             logger.error(message)

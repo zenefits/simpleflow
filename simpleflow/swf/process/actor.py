@@ -330,7 +330,7 @@ class Poller(NamedMixin, swf.actors.Actor):
                 log_with=logger.info,
             )(self.complete)  # Exponential backoff on errors.
             complete(token, response)
-        except Exception as err:
+        except BaseException as err:
             # This embarasing because the decider cannot notify SWF of the
             # task completion. As it will not try again, the task will
             # timeout (start_to_complete).
@@ -387,7 +387,7 @@ class Poller(NamedMixin, swf.actors.Actor):
         except swf.exceptions.PollTimeout:
             logger.debug('{}: PollTimeout'.format(self))
             raise
-        except Exception as err:
+        except BaseException as err:
             logger.error(
                 "exception %s when polling on %s",
                 str(err),

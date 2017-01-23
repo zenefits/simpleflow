@@ -99,7 +99,7 @@ class ActivityPoller(Poller, swf.actors.ActivityWorker):
                 task.activity_type.name,
                 err,
             ))
-        except Exception as err:
+        except BaseException as err:
             logger.error('cannot fail task {}: {}'.format(
                 task.activity_type.name,
                 err,
@@ -132,7 +132,7 @@ class ActivityWorker(object):
             args = input.get('args', ())
             kwargs = input.get('kwargs', {})
             result = ActivityTask(activity, is_shutdown=self.is_shutdown, *args, **kwargs).execute()
-        except Exception as err:
+        except BaseException as err:
             tb = traceback.format_exc()
             logger.exception(err)
             return poller.fail(token, task, reason=unicode(err), details=tb)
@@ -141,7 +141,7 @@ class ActivityWorker(object):
             poller._complete(token, json.dumps(result))
         except swf.exceptions.DoesNotExistError:
             logger.info('cannot complete task {} due to DoesNotExistError' % task.activity_id)
-        except Exception as err:
+        except BaseException as err:
             tb = traceback.format_exc()
             reason = 'cannot complete task {}: {} {}'.format(
                 task.activity_id,
@@ -278,12 +278,17 @@ def run_in_proc(poller, token, task, activity_id, heartbeat=60, is_shutdown=None
 
             logger.info('[SWF][Worker][%s] Finished processing task. ', task.activity_type.name)
 
+        except:
+            logger.error('[SWF][Worker][{}] Error when processing task. Exception: {}'.format(task.activity_type.name, traceback.format_exc()))
+
         finally:
             # task finished. Let's finish the heartbeat thread
             isTaskFinished.set()
             # let's wait for the heartbeat thread to die
             heartbeat_thread.join()
 
+    except:
+        logger.error('[SWF][Worker][{}] Error when processing task. Exception: {}'.format(task.activity_type.name, traceback.format_exc()))
     finally:
         # task finished. Let's finish the heartbeat thread
         isTaskFinished.set()
@@ -377,7 +382,7 @@ def start_heartbeat(poller, token, task, isTaskFinished, heartbeat, pid, activit
                 logger.info('[SWF][Worker][Heartbeat][%s] Activity DoesNotExistError when sending heartbeat. Stopping the task.', task_identity)
                 try_cancel_task()
 
-            except Exception as error:
+            except BaseException as error:
                 # Ignore if we failed to send heartbeat. The
                 # subprocess will become orphan and the heartbeat timeout may
                 # eventually trigger on Amazon SWF side.
@@ -421,7 +426,7 @@ def spawn(poller, token, task, heartbeat=60):
             # The subprocess is responsible for completing the task.
             # Either the task or the workflow execution no longer exists.
             return
-        except Exception as error:
+        except BaseException as error:
             # Let's crash if it cannot notify the heartbeat failed.  The
             # subprocess will become orphan and the heartbeat timeout may
             # eventually trigger on Amazon SWF side.

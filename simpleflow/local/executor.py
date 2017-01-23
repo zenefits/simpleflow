@@ -23,7 +23,7 @@ class Executor(executor.Executor):
 
         try:
             future._result = task.execute()
-        except Exception as err:
+        except BaseException as err:
             future._exception = err
             if func.raises_on_failure:
                 raise
