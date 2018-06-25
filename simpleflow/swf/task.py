@@ -38,6 +38,7 @@ class ActivityTask(task.ActivityTask):
             'heartbeat_timeout',
             str(activity.task_heartbeat_timeout),
         )
+        task_priority = kwargs.get('priority', str(self.task_priority))
 
         # check if task_start_to_close_timeout is specified in the task message (task input)
         task_timeout_override = self.kwargs.get('task_start_to_close_timeout', None)
@@ -60,6 +61,7 @@ class ActivityTask(task.ActivityTask):
             duration_timeout=duration_timeout,
             schedule_timeout=schedule_timeout,
             heartbeat_timeout=heartbeat_timeout,
+            task_priority=task_priority,
         )
 
         return [decision]
