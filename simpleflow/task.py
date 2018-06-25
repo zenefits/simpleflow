@@ -43,6 +43,7 @@ class ActivityTask(Task):
             raise TypeError('Wrong value for `activity`, got {} instead'.format(type(activity)))
         self.activity = activity
         self.idempotent = activity.idempotent
+        self.task_priority = kwargs.pop('activityPriority', None) or 0
         self.args = self.resolve_args(*args)
         self.kwargs = self.resolve_kwargs(**kwargs)
         self.id = None
