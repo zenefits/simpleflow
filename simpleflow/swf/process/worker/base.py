@@ -374,7 +374,7 @@ def start_heartbeat(poller, token, task, isTaskFinished, heartbeat, pid, activit
 
         if (not isTaskFinished.is_set()):
             # task is still running
-            logger.info('[SWF][Worker][Heartbeat][%s] Sending heartbeat. ', task_identity)
+            logger.debug('[SWF][Worker][Heartbeat][%s] Sending heartbeat. ', task_identity)
 
             response = None
 
