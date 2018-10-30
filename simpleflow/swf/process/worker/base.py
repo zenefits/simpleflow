@@ -94,10 +94,10 @@ class ActivityPoller(Poller, swf.actors.ActivityWorker):
                 reason=swf.format.reason(reason),
                 details=swf.format.details(details),
             )
-        except swf.exceptions.DoesNotExistError:
+        except swf.exceptions.DoesNotExistError as e:
             logger.info('cannot fail task {}: {}'.format(
                 task.activity_type.name,
-                err,
+                e,
             ))
         except BaseException as err:
             logger.error('cannot fail task {}: {}'.format(
