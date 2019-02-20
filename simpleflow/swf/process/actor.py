@@ -10,7 +10,6 @@ import signal
 import sys
 import time
 
-from setproctitle import setproctitle
 
 import swf.actors
 
@@ -81,10 +80,6 @@ class Supervisor(object):
 
     def start(self):
         logger.info('starting {}'.format(self._payload))
-        setproctitle('{}(payload={})'.format(
-            self.__class__.__name__,
-            get_payload_name(self._payload),
-        ))
         assert len(self._processes) == 0
         for _ in xrange(self._nb_children):
             child = multiprocessing.Process(
@@ -166,7 +161,6 @@ class NamedMixin(object):
         if name is None:
             name = self.name
 
-        setproctitle('{}[{}]'.format(name, self.state))
 
 
 class Poller(NamedMixin, swf.actors.Actor):

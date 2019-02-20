@@ -71,7 +71,6 @@ def read(fname):
 
 DEPS = [
     'tabulate==0.7.3',
-    'setproctitle==1.1.9',
     'subprocess32==3.2.6',
     'click==6.3',
     'psutil==4.0.0',
