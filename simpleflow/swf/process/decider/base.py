@@ -115,10 +115,23 @@ class DeciderPoller(swf.actors.Decider, Poller):
         token, history = task
 
         self.init_thread_local(history)
-
+        task_list = self.task_list
+        # extract the workflow input from the history
+        # and use the revision_time as tasklist.
+        if len(history) > 0:
+            workflow_started_event = history[0]
+            input = getattr(workflow_started_event, 'input', '')
+            task_list = input.get('kwargs').get('revision_time')
         logger.info('taking decision for workflow {}'.format(
             self._workflow_name))
         decisions = self.decide(history)
+        if decisions and isinstance(decisions, list):
+            decision = decisions[0]
+            # Update the decider json payload with the new tasklist
+            # where we want to submit the task
+            if decision.get('decisionType') == 'ScheduleActivityTask':
+                logger.info('Dispatching the task the tasklist {}'.format(task_list))
+                decisions[0]['scheduleActivityTaskDecisionAttributes']['taskList'].update({'name': task_list})
         try:
             logger.info('completing decision for workflow {}'.format(
                 self._workflow_name))
